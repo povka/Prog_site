@@ -1,6 +1,7 @@
 let deckData = {};
 let siteData = {};
 let currentBinderRows = [];
+let banlistStatusById = new Map();
 
 const deckSearch = document.getElementById("deckSearch");
 const deckSelector = document.getElementById("deckSelector");
@@ -69,6 +70,111 @@ function toNumber(value) {
   if (trimmed === "") return null;
   const n = Number(trimmed);
   return Number.isFinite(n) ? n : null;
+}
+
+function normalizeCardId(value) {
+  const raw = safeText(value);
+  if (!raw) return "";
+
+  const digitsOnly = raw.replace(/\D+/g, "");
+  if (!digitsOnly) return "";
+
+  return String(Number(digitsOnly));
+}
+
+function parseBanlistConfig(content) {
+  const map = new Map();
+  const lines = String(content || "").split(/\r?\n/);
+
+  let currentSection = "";
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    if (line.startsWith("#")) {
+      currentSection = line.slice(1).trim().toLowerCase();
+      continue;
+    }
+
+    if (
+      line.startsWith("!") ||
+      line.startsWith("--") ||
+      line.startsWith("$")
+    ) {
+      continue;
+    }
+
+    const match = line.match(/^(\d+)\s+(\d+)\b/);
+    if (!match) continue;
+
+    const cardId = normalizeCardId(match[1]);
+    const count = Number(match[2]);
+
+    if (!cardId || !Number.isFinite(count)) continue;
+
+    let status = null;
+
+    if (currentSection === "forbidden" || count === 0) {
+      status = 0;
+    } else if (currentSection === "limited" || count === 1) {
+      status = 1;
+    } else if (
+      currentSection === "semi-limited" ||
+      currentSection === "semilimited" ||
+      count === 2
+    ) {
+      status = 2;
+    } else {
+      status = null;
+    }
+
+    if (status !== null) {
+      map.set(cardId, status);
+    }
+  }
+
+  return map;
+}
+
+async function loadBanlistData() {
+  try {
+    const res = await fetch("data/Banlist.conf");
+    if (!res.ok) throw new Error("Failed to load banlist");
+
+    const text = await res.text();
+    banlistStatusById = parseBanlistConfig(text);
+  } catch {
+    banlistStatusById = new Map();
+  }
+}
+
+function getBanlistStatusForRow(row) {
+  const possibleIds = [
+    row.cardid,
+    row.cardId,
+    row.id,
+    row.passcode
+  ];
+
+  for (const value of possibleIds) {
+    const normalized = normalizeCardId(value);
+    if (normalized && banlistStatusById.has(normalized)) {
+      return banlistStatusById.get(normalized);
+    }
+  }
+
+  return null;
+}
+
+function getBanlistIconForRow(row) {
+  const status = getBanlistStatusForRow(row);
+
+  if (status === 0) return "images/banlist/banned.png";
+  if (status === 1) return "images/banlist/limited1.png";
+  if (status === 2) return "images/banlist/limited2.png";
+
+  return "";
 }
 
 function parseMultiSearchTerms(value) {
@@ -708,6 +814,7 @@ function renderBinder(rows) {
 
   filtered.forEach((row) => {
     const imageUrl = getCardImage(row);
+    const banlistIcon = getBanlistIconForRow(row);
     const card = document.createElement("button");
     card.className = "binder-card";
     card.type = "button";
@@ -719,6 +826,22 @@ function renderBinder(rows) {
             ? `<img src="${imageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" />`
             : `<div class="binder-no-image">No Image</div>`
         }
+
+        ${
+          banlistIcon
+            ? `
+              <span class="binder-banlist-badge">
+                <img
+                  src="${banlistIcon}"
+                  alt="Banlist status"
+                  class="binder-banlist-icon"
+                  loading="lazy"
+                />
+              </span>
+            `
+            : ""
+        }
+
         <span class="binder-qty">x${safeText(row.quantity) || "1"}</span>
       </div>
       <div class="binder-meta">
@@ -819,7 +942,8 @@ toggleFiltersButton.addEventListener("click", () => {
 async function init() {
   await Promise.all([
     loadSiteData(),
-    loadDeckData()
+    loadDeckData(),
+    loadBanlistData()
   ]);
 
   syncFilterVisibility();
