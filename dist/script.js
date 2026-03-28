@@ -57,7 +57,7 @@ const filterLinkArrows = document.getElementById("filterLinkArrows");
 
 const binderFiltersPanel = document.getElementById("binderFiltersPanel");
 const toggleFiltersButton = document.getElementById("toggleFiltersButton");
-let binderFiltersCollapsed = false;
+let binderFiltersCollapsed = true;
 
 function safeText(value) {
   return value ? String(value).trim() : "";
