@@ -16,11 +16,16 @@ const filterType = document.getElementById("filterType");
 const filterAttribute = document.getElementById("filterAttribute");
 const filterRace = document.getElementById("filterRace");
 const filterSubtypes = document.getElementById("filterSubtypes");
+
 const filterAtkExact = document.getElementById("filterAtkExact");
 const filterAtkMin = document.getElementById("filterAtkMin");
 const filterAtkMax = document.getElementById("filterAtkMax");
-const filterLevelMin = document.getElementById("filterLevelMin");
+
+const filterDefExact = document.getElementById("filterDefExact");
 const filterDefMin = document.getElementById("filterDefMin");
+const filterDefMax = document.getElementById("filterDefMax");
+
+const filterLevelMin = document.getElementById("filterLevelMin");
 const binderSort = document.getElementById("binderSort");
 
 const modal = document.getElementById("imageModal");
@@ -34,10 +39,8 @@ function safeText(value) {
 
 function toNumber(value) {
   if (value === null || value === undefined) return null;
-
   const trimmed = String(value).trim();
   if (trimmed === "") return null;
-
   const n = Number(trimmed);
   return Number.isFinite(n) ? n : null;
 }
@@ -269,8 +272,12 @@ function syncMonsterOnlyFilterVisibility() {
     filterAtkExact.value = "";
     filterAtkMin.value = "";
     filterAtkMax.value = "";
-    filterLevelMin.value = "";
+
+    filterDefExact.value = "";
     filterDefMin.value = "";
+    filterDefMax.value = "";
+
+    filterLevelMin.value = "";
   } else {
     filterAttribute.disabled = false;
     filterSubtypes.classList.remove("is-disabled");
@@ -287,8 +294,12 @@ function applyBinderFilters(rows) {
   const atkExact = toNumber(filterAtkExact.value);
   const minAtk = toNumber(filterAtkMin.value);
   const maxAtk = toNumber(filterAtkMax.value);
-  const minLevel = toNumber(filterLevelMin.value);
+
+  const defExact = toNumber(filterDefExact.value);
   const minDef = toNumber(filterDefMin.value);
+  const maxDef = toNumber(filterDefMax.value);
+
+  const minLevel = toNumber(filterLevelMin.value);
 
   const useMonsterOnly = isMonsterFilterMode();
 
@@ -312,8 +323,8 @@ function applyBinderFilters(rows) {
     const rowType = safeText(row.type);
     const rowRace = safeText(row.race);
     const rowAtk = toNumber(row.atk);
-    const rowLevel = toNumber(row.level);
     const rowDef = toNumber(row.def);
+    const rowLevel = toNumber(row.level);
 
     if (q && !searchable.includes(q)) return false;
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
@@ -340,12 +351,20 @@ function applyBinderFilters(rows) {
       if (rowAtk === null || rowAtk > maxAtk) return false;
     }
 
-    if (useMonsterOnly && minLevel !== null) {
-      if (rowLevel === null || rowLevel < minLevel) return false;
+    if (useMonsterOnly && defExact !== null) {
+      if (rowDef === null || rowDef !== defExact) return false;
     }
 
     if (useMonsterOnly && minDef !== null) {
       if (rowDef === null || rowDef < minDef) return false;
+    }
+
+    if (useMonsterOnly && maxDef !== null) {
+      if (rowDef === null || rowDef > maxDef) return false;
+    }
+
+    if (useMonsterOnly && minLevel !== null) {
+      if (rowLevel === null || rowLevel < minLevel) return false;
     }
 
     return true;
@@ -456,8 +475,12 @@ filterSubtypes.addEventListener("change", (event) => {
 filterAtkExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterAtkMin.addEventListener("input", () => renderBinder(currentBinderRows));
 filterAtkMax.addEventListener("input", () => renderBinder(currentBinderRows));
-filterLevelMin.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterDefExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterDefMin.addEventListener("input", () => renderBinder(currentBinderRows));
+filterDefMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterLevelMin.addEventListener("input", () => renderBinder(currentBinderRows));
 binderSort.addEventListener("change", () => renderBinder(currentBinderRows));
 
 async function init() {
