@@ -13,6 +13,7 @@ const binderGrid = document.getElementById("binderGrid");
 const binderStatus = document.getElementById("binderStatus");
 
 const filterType = document.getElementById("filterType");
+const filterSpellType = document.getElementById("filterSpellType");
 const filterAttribute = document.getElementById("filterAttribute");
 const filterRace = document.getElementById("filterRace");
 const filterSubtypes = document.getElementById("filterSubtypes");
@@ -254,14 +255,24 @@ function isMonsterFilterMode() {
   return selectedType === "" || selectedType === "Monster";
 }
 
+function isSpellFilterMode() {
+  const selectedType = safeText(filterType.value);
+  return selectedType === "" || selectedType === "Spell";
+}
+
 function syncMonsterOnlyFilterVisibility() {
-  const shouldHideMonsterOnly = !isMonsterFilterMode();
+  const showMonsterOnly = isMonsterFilterMode();
+  const showSpellOnly = isSpellFilterMode();
 
   document.querySelectorAll(".monster-only-control").forEach((el) => {
-    el.classList.toggle("is-hidden", shouldHideMonsterOnly);
+    el.classList.toggle("is-hidden", !showMonsterOnly);
   });
 
-  if (shouldHideMonsterOnly) {
+  document.querySelectorAll(".spell-only-control").forEach((el) => {
+    el.classList.toggle("is-hidden", !showSpellOnly);
+  });
+
+  if (!showMonsterOnly) {
     filterAttribute.value = "";
     filterAttribute.disabled = true;
     filterRace.value = "";
@@ -286,11 +297,16 @@ function syncMonsterOnlyFilterVisibility() {
     filterAttribute.disabled = false;
     filterSubtypes.classList.remove("is-disabled");
   }
+
+  if (!showSpellOnly) {
+    filterSpellType.value = "";
+  }
 }
 
 function applyBinderFilters(rows) {
   const q = binderSearch.value.trim().toLowerCase();
   const selectedType = safeText(filterType.value);
+  const selectedSpellType = safeText(filterSpellType.value);
   const selectedAttribute = safeText(filterAttribute.value).toUpperCase();
   const selectedRace = safeText(filterRace.value);
   const selectedSubtypes = getSelectedSubtypeValues();
@@ -379,6 +395,12 @@ function applyBinderFilters(rows) {
 
     if (useMonsterOnly && maxLevel !== null) {
       if (rowLevel === null || rowLevel > maxLevel) return false;
+    }
+
+    if (isSpellFilterMode() && selectedSpellType) {
+      if (getHighLevelType(row) !== "Spell" || safeText(row.race) !== selectedSpellType) {
+        return false;
+      }
     }
 
     return true;
@@ -476,6 +498,8 @@ filterType.addEventListener("change", () => {
   syncMonsterOnlyFilterVisibility();
   renderBinder(currentBinderRows);
 });
+
+filterSpellType.addEventListener("change", () => renderBinder(currentBinderRows));
 
 filterAttribute.addEventListener("change", () => renderBinder(currentBinderRows));
 filterRace.addEventListener("change", () => renderBinder(currentBinderRows));

@@ -584,7 +584,7 @@ p{color:var(--ink-soft)}
 
 .binder-controls-middle{
   display:grid;
-  grid-template-columns:minmax(120px, 0.62fr) minmax(120px, 0.62fr) minmax(140px, 0.78fr) minmax(0, 2.45fr);
+  grid-template-columns:minmax(120px, 0.58fr) minmax(120px, 0.58fr) minmax(140px, 0.72fr) minmax(140px, 0.72fr) minmax(0, 2.1fr);
   gap:12px;
   align-items:stretch;
 }
@@ -1027,4 +1027,8 @@ p{color:var(--ink-soft)}
 #binderPlayer,
 #binderSort{
   width:100%;
+}
+
+.spell-only-control.is-hidden{
+  display:none !important;
 }
