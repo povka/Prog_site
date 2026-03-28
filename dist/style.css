@@ -1032,10 +1032,6 @@ p{color:var(--ink-soft)}
   min-width:0;
 }
 
-.binder-controls-sort-box{
-  width:100%;
-}
-
 #binderPlayer,
 #binderSort{
   width:100%;
@@ -1052,9 +1048,43 @@ p{color:var(--ink-soft)}
   align-items:stretch;
 }
 
+.binder-controls-sort-box{
+  width:100%;
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) 52px;
+  gap:10px;
+  align-items:stretch;
+}
+
 .binder-controls-sort-box .deck-select{
   width:100%;
   font-weight:700;
+}
+
+.sort-direction-button{
+  min-height:52px;
+  padding:0;
+  border:2px solid var(--line);
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  color:var(--ink);
+  font-size:1.05rem;
+  font-weight:800;
+  line-height:1;
+  cursor:pointer;
+  transition:0.18s ease;
+}
+
+.sort-direction-button:hover{
+  transform:translateY(-1px);
+  border-color:var(--accent-2);
+  box-shadow:0 0 0 3px rgba(141,91,255,0.10);
+}
+
+.sort-direction-button:focus-visible{
+  outline:none;
+  border-color:var(--accent-2);
+  box-shadow:0 0 0 3px rgba(141,91,255,0.14);
 }
 
 .binder-controls-type-row{

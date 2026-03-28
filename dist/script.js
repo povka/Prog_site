@@ -25,6 +25,8 @@ const filterDefMin = document.getElementById("filterDefMin");
 
 const filterLevelMin = document.getElementById("filterLevelMin");
 const binderSort = document.getElementById("binderSort");
+const binderSortDirectionButton = document.getElementById("binderSortDirection");
+let binderSortDirection = "asc";
 
 const modal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
@@ -319,6 +321,62 @@ function syncFilterVisibility() {
   }
 }
 
+function isXyzMonster(row) {
+  return safeText(row.type).toLowerCase().includes("xyz");
+}
+
+function getSortValue(row, sortKey) {
+  switch (sortKey) {
+    case "name":
+      return safeText(row.name).toLowerCase();
+
+    case "level":
+      return isXyzMonster(row) ? null : toNumber(row.level);
+
+    case "rank":
+      return isXyzMonster(row) ? toNumber(row.level) : null;
+
+    case "link":
+      return toNumber(row.linkval ?? row.linkVal);
+
+    case "scale":
+      return toNumber(row.scale);
+
+    case "atk":
+      return toNumber(row.atk);
+
+    case "def":
+      return toNumber(row.def);
+
+    default:
+      return safeText(row.name).toLowerCase();
+  }
+}
+
+function compareSortValues(aValue, bValue, direction) {
+  const aMissing = aValue === null || aValue === undefined || aValue === "";
+  const bMissing = bValue === null || bValue === undefined || bValue === "";
+
+  if (aMissing && bMissing) return 0;
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+
+  if (typeof aValue === "string" || typeof bValue === "string") {
+    const result = String(aValue).localeCompare(String(bValue), undefined, { sensitivity: "base" });
+    return direction === "asc" ? result : -result;
+  }
+
+  const result = aValue - bValue;
+  return direction === "asc" ? result : -result;
+}
+
+function updateSortDirectionButton() {
+  const ascending = binderSortDirection === "asc";
+  binderSortDirectionButton.textContent = ascending ? "↑" : "↓";
+  binderSortDirectionButton.title = ascending ? "Ascending" : "Descending";
+  binderSortDirectionButton.setAttribute("aria-label", ascending ? "Sorting ascending" : "Sorting descending");
+}
+
 function applyBinderFilters(rows) {
   const q = binderSearch.value.trim().toLowerCase();
   const selectedType = safeText(filterType.value);
@@ -419,25 +477,13 @@ function applyBinderFilters(rows) {
     return true;
   });
 
-  switch (binderSort.value) {
-    case "name-desc":
-      filtered.sort((a, b) => safeText(b.name).localeCompare(safeText(a.name)));
-      break;
-    case "qty-desc":
-      filtered.sort((a, b) => (toNumber(b.quantity) ?? 0) - (toNumber(a.quantity) ?? 0));
-      break;
-    case "atk-desc":
-      filtered.sort((a, b) => (toNumber(b.atk) ?? -1) - (toNumber(a.atk) ?? -1));
-      break;
-    case "def-desc":
-      filtered.sort((a, b) => (toNumber(b.def) ?? -1) - (toNumber(a.def) ?? -1));
-      break;
-    case "level-desc":
-      filtered.sort((a, b) => (toNumber(b.level) ?? -1) - (toNumber(a.level) ?? -1));
-      break;
-    default:
-      filtered.sort((a, b) => safeText(a.name).localeCompare(safeText(b.name)));
-  }
+  const sortKey = binderSort.value;
+
+  filtered.sort((a, b) => {
+    const aValue = getSortValue(a, sortKey);
+    const bValue = getSortValue(b, sortKey);
+    return compareSortValues(aValue, bValue, binderSortDirection);
+  });
 
   return filtered;
 }
@@ -500,11 +546,6 @@ async function loadBinder(jsonPath) {
   }
 }
 
-binderPlayer.addEventListener("change", () => {
-  syncMonsterOnlyFilterVisibility();
-  loadBinder(binderPlayer.value);
-});
-
 binderSearch.addEventListener("input", () => renderBinder(currentBinderRows));
 
 filterType.addEventListener("change", () => {
@@ -542,6 +583,12 @@ binderPlayer.addEventListener("change", () => {
 
 binderSort.addEventListener("change", () => renderBinder(currentBinderRows));
 
+binderSortDirectionButton.addEventListener("click", () => {
+  binderSortDirection = binderSortDirection === "asc" ? "desc" : "asc";
+  updateSortDirectionButton();
+  renderBinder(currentBinderRows);
+});
+
 async function init() {
   await Promise.all([
     loadSiteData(),
@@ -549,6 +596,7 @@ async function init() {
   ]);
 
   syncFilterVisibility();
+  updateSortDirectionButton();
   loadBinder(binderPlayer.value);
 }
 
