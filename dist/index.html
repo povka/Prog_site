@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Prog with the Bois</title>
+  <meta name="description" content="We bully Retroid99 with Cards" />
+
+  <meta property="og:title" content="Prog with the Bois" />
+  <meta property="og:description" content="We bully Retroid99 with Cards" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://asapaskaprog.asapaska3.workers.dev/" />
+  <meta property="og:image" content="https://asapaskaprog.asapaska3.workers.dev/images/poggies.png?v=3" />
+  <meta property="og:image:secure_url" content="https://asapaskaprog.asapaska3.workers.dev/images/poggies.png?v=3" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Prog with the Bois" />
+  <meta name="twitter:description" content="We bully Retroid99 with Cards" />
+  <meta name="twitter:image" content="https://asapaskaprog.asapaska3.workers.dev/images/poggies.png?v=3" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div>
+        <p class="eyebrow">Yu-Gi-Oh! Progression</p>
+        <h1>Weekly Results Hub</h1>
+      </div>
+      <nav class="nav">
+        <a href="#results">Results</a>
+        <a href="#decklists">Decklists</a>
+        <a href="#binders">Binders</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="pill">Featured Standing</span>
+          <h2 id="heroTitle">Weekly Prog</h2>
+          <strong id="heroDescription">
+            Standings, weekly winners, format notes, decklist images and rewatch links in one place
+          </strong>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#results">View Weekly Results</a>
+            <a class="button button-secondary" href="#decklists">Browse Decklists</a>
+            <a class="button button-secondary" href="#binders">Browse Binders</a>
+          </div>
+        </div>
+
+        <aside class="card snapshot">
+          <p class="section-label">Current Snapshot</p>
+          <div class="snapshot-grid" id="snapshotGrid"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="results" class="container section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Results</p>
+          <h3>Weekly Standings</h3>
+        </div>
+        <p class="muted">Updated each week with results, format progression, and rewatch links.</p>
+      </div>
+
+      <div id="resultsContainer"></div>
+    </section>
+
+    <section id="decklists" class="container section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Decklists</p>
+          <h3>Deck Browser</h3>
+        </div>
+        <p class="muted">Search a format or choose a week to view all four decklists.</p>
+      </div>
+
+      <div class="card deck-browser-card">
+        <div class="deck-browser-controls">
+          <input
+            type="text"
+            id="deckSearch"
+            class="deck-search"
+            placeholder="Search by week or set name, e.g. Metal Raiders"
+          />
+          <select id="deckSelector" class="deck-select"></select>
+        </div>
+
+        <div id="deckResultsLabel" class="deck-results-label"></div>
+        <div id="deckDisplay" class="deck-display-grid"></div>
+      </div>
+    </section>
+
+    <section id="binders" class="container section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Binders</p>
+          <h3>Binder Viewer</h3>
+        </div>
+        <p class="muted">Browse each player's collection with real card filters.</p>
+      </div>
+
+      <div class="card deck-browser-card">
+        <div class="deck-browser-controls binder-controls">
+          <div class="binder-controls-top">
+            <input
+              type="text"
+              id="binderSearch"
+              class="deck-search"
+              placeholder="Search card name, set, code, type, archetype"
+            />
+
+            <select id="binderPlayer" class="deck-select">
+              <option value="data/generated/asapaska.json">asapaska</option>
+              <option value="data/generated/retroid99.json">Retroid99</option>
+              <option value="data/generated/mhkaixer.json">MHKaixer</option>
+              <option value="data/generated/shiruba.json">ShirubaMaebure</option>
+            </select>
+          </div>
+
+          <div class="binder-controls-divider"></div>
+
+          <div class="binder-controls-middle">
+            <select id="filterType" class="deck-select">
+              <option value="">All Cards</option>
+              <option value="Monster">Monster</option>
+              <option value="Spell">Spell</option>
+              <option value="Trap">Trap</option>
+            </select>
+
+            <select id="filterAttribute" class="deck-select monster-only-control">
+              <option value="">All Attribute</option>
+              <option value="DARK">DARK</option>
+              <option value="LIGHT">LIGHT</option>
+              <option value="EARTH">EARTH</option>
+              <option value="WATER">WATER</option>
+              <option value="FIRE">FIRE</option>
+              <option value="WIND">WIND</option>
+              <option value="DIVINE">DIVINE</option>
+            </select>
+
+            <select id="filterRace" class="deck-select monster-only-control">
+              <option value="">All Types</option>
+              <option value="Aqua">Aqua</option>
+              <option value="Beast">Beast</option>
+              <option value="Beast-Warrior">Beast-Warrior</option>
+              <option value="Creator-God">Creator-God</option>
+              <option value="Cyberse">Cyberse</option>
+              <option value="Dinosaur">Dinosaur</option>
+              <option value="Divine-Beast">Divine-Beast</option>
+              <option value="Dragon">Dragon</option>
+              <option value="Fairy">Fairy</option>
+              <option value="Fiend">Fiend</option>
+              <option value="Fish">Fish</option>
+              <option value="Illusion">Illusion</option>
+              <option value="Insect">Insect</option>
+              <option value="Machine">Machine</option>
+              <option value="Plant">Plant</option>
+              <option value="Psychic">Psychic</option>
+              <option value="Pyro">Pyro</option>
+              <option value="Reptile">Reptile</option>
+              <option value="Rock">Rock</option>
+              <option value="Sea Serpent">Sea Serpent</option>
+              <option value="Spellcaster">Spellcaster</option>
+              <option value="Thunder">Thunder</option>
+              <option value="Warrior">Warrior</option>
+              <option value="Winged Beast">Winged Beast</option>
+              <option value="Wyrm">Wyrm</option>
+              <option value="Zombie">Zombie</option>
+            </select>
+
+            <div id="filterSubtypes" class="subtype-panel monster-only-control" aria-label="Monster subtypes">
+              <span class="subtype-panel-title">Subtypes</span>
+              <label class="subtype-chip"><input type="checkbox" value="Normal" /><span>Normal</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Effect" /><span>Effect</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Union" /><span>Union</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Spirit" /><span>Spirit</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Flip" /><span>Flip</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Gemini" /><span>Gemini</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Toon" /><span>Toon</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Ritual" /><span>Ritual</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Fusion" /><span>Fusion</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Synchro" /><span>Synchro</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Xyz" /><span>Xyz</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Pendulum" /><span>Pendulum</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Link" /><span>Link</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Tuner" /><span>Tuner</span></label>
+            </div>
+          </div>
+
+          <div class="binder-controls-bottom">
+            <input type="number" id="filterAtkExact" class="deck-search monster-only-control" placeholder="ATK" />
+            <input type="number" id="filterAtkMin" class="deck-search monster-only-control" placeholder="Min ATK" />
+            <input type="number" id="filterAtkMax" class="deck-search monster-only-control" placeholder="Max ATK" />
+            <input type="number" id="filterLevelMin" class="deck-search monster-only-control" placeholder="Min level" />
+            <input type="number" id="filterDefMin" class="deck-search monster-only-control" placeholder="Min DEF" />
+
+            <select id="binderSort" class="deck-select">
+              <option value="name-asc">Name A–Z</option>
+              <option value="name-desc">Name Z–A</option>
+              <option value="qty-desc">Quantity high–low</option>
+              <option value="atk-desc">ATK high–low</option>
+              <option value="def-desc">DEF high–low</option>
+              <option value="level-desc">Level high–low</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="binderStatus" class="deck-results-label">Loading binder...</div>
+        <div id="binderGrid" class="binder-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="imageModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="true"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" type="button" id="closeModal" aria-label="Close popup">×</button>
+      <p id="modalTitle" class="modal-title"></p>
+      <img id="modalImage" class="modal-image" src="" alt="">
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

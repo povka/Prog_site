@@ -1,0 +1,48 @@
+{
+  "hero": {
+    "title": "Weekly Prog",
+    "description": "Standings, weekly winners, format notes, decklist images and rewatch links in one place"
+  },
+  "snapshot": [
+    { "label": "Latest Winner", "value": "asapaska" },
+    { "label": "Current Format", "value": "Metal Raiders" },
+    { "label": "Weeks Played", "value": "2" },
+    { "label": "Overall Winner", "value": "asapaska & Retroid99 Tie" }
+  ],
+  "weeks": [
+    {
+      "week": "Week 1",
+      "date": "March 15, 2026",
+      "format": "Legend of Blue Eyes White Dragon",
+      "winner": "Retroid99",
+      "note": "NOTE: Retroid99 did not have 3 copies of Sparks and illegally built the deck",
+      "metaTitle": "2K Asses",
+      "metaDescription": "Sit on biggest defense position assholes you have until you draw Raigeki",
+      "rewatchUrl": "https://www.youtube.com/watch?v=b5qNWPHJZXo",
+      "rewatchLabel": "Watch Week 1",
+      "standings": [
+        { "rank": 1, "player": "Retroid99", "avatar": "images/profile/retroid.jpg", "record": "2-0" },
+        { "rank": 2, "player": "MHKaixer", "avatar": "images/profile/kaixer.jpg", "record": "1-1" },
+        { "rank": 3, "player": "asapaska", "avatar": "images/profile/asa.jpg", "record": "0-2" },
+        { "rank": 4, "player": "ShirubaMaebure", "avatar": "images/profile/shiruba.jpg", "record": "Absent" }
+      ]
+    },
+    {
+      "week": "Week 2",
+      "date": "March 21, 2026",
+      "format": "Metal Raiders",
+      "winner": "asapaska",
+      "note": "NOTE: MHKaixer had to re-do pulls after week 1 after finding issues with the binder",
+      "metaTitle": "Big Guys",
+      "metaDescription": "Jirai Gumo and Dark Elf carry as well as 2K Defenders stealing wins with Shield & Sword",
+      "rewatchUrl": "https://www.youtube.com/watch?v=4KiUEBZm-gs",
+      "rewatchLabel": "Watch Week 2",
+      "standings": [
+        { "rank": 1, "player": "asapaska", "avatar": "images/profile/asa.jpg", "record": "3-0" },
+        { "rank": 2, "player": "Retroid99", "avatar": "images/profile/retroid.jpg", "record": "2-1" },
+        { "rank": 3, "player": "ShirubaMaebure", "avatar": "images/profile/shiruba.jpg", "record": "1-2" },
+        { "rank": 4, "player": "MHKaixer", "avatar": "images/profile/kaixer.jpg", "record": "0-3" }
+      ]
+    }
+  ]
+}

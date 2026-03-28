@@ -1,0 +1,22 @@
+{
+  "week1": {
+    "label": "Week 1 • Legend of Blue Eyes White Dragon",
+    "searchTerms": ["week 1", "lob", "legend of blue eyes", "legend of blue eyes white dragon"],
+    "decks": [
+      { "player": "Retroid99", "image": "images/decks/week1-retroid.jpg", "title": "Week 1 • Troid won purely off skill Deck" },
+      { "player": "MHKaixer", "image": "images/decks/week1-kaixer.jpg", "title": "Week 1 • MHKaixer Deck" },
+      { "player": "asapaska", "image": "images/decks/week1-asa.jpg", "title": "Week 1 • asapaska Deck" },
+      { "player": "ShirubaMaebure", "image": "images/decks/week1-shiruba.jpg", "title": "Week 1 • ShirubaMaebure Deck" }
+    ]
+  },
+  "week2": {
+    "label": "Week 2 • Metal Raiders",
+    "searchTerms": ["week 2", "mrd", "metal raiders"],
+    "decks": [
+      { "player": "Retroid99", "image": "images/decks/week2-retroid.jpg", "title": "Week 2 • Retroid99 Deck" },
+      { "player": "MHKaixer", "image": "images/decks/week2-kaixer.jpg", "title": "Week 2 • MHKaixer Deck" },
+      { "player": "asapaska", "image": "images/decks/week2-asa.jpg", "title": "Week 2 • asapaska Deck" },
+      { "player": "ShirubaMaebure", "image": "images/decks/week2-shiruba.jpg", "title": "Week 2 • ShirubaMaebure Deck" }
+    ]
+  }
+}
