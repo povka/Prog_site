@@ -134,24 +134,13 @@
 
             <div class="binder-controls-sort-box">
               <select id="binderSort" class="deck-select">
-                <option value="name">Name</option>
-                <option value="level">Level</option>
-                <option value="rank">Rank</option>
-                <option value="link">Link Rating</option>
-                <option value="scale">Pendulum Scale</option>
-                <option value="atk">ATK</option>
-                <option value="def">DEF</option>
+                <option value="name-asc">Name A–Z</option>
+                <option value="name-desc">Name Z–A</option>
+                <option value="qty-desc">Quantity high–low</option>
+                <option value="atk-desc">ATK high–low</option>
+                <option value="def-desc">DEF high–low</option>
+                <option value="level-desc">Level high–low</option>
               </select>
-
-              <button
-                type="button"
-                id="binderSortDirection"
-                class="sort-direction-button"
-                aria-label="Toggle sort direction"
-                title="Ascending"
-              >
-                ↑
-              </button>
             </div>
           </div>
 
@@ -233,20 +222,10 @@
             <input type="number" id="filterDefExact" class="deck-search" placeholder="DEF" />
             <input type="number" id="filterDefMin" class="deck-search" placeholder="Min DEF" />
             <input type="number" id="filterDefMax" class="deck-search" placeholder="Max DEF" />
-          </div>
 
-          <div class="binder-controls-progression-row monster-filter-row">
             <input type="number" id="filterLevelExact" class="deck-search" placeholder="Level" />
             <input type="number" id="filterLevelMin" class="deck-search" placeholder="Min level" />
             <input type="number" id="filterLevelMax" class="deck-search" placeholder="Max level" />
-
-            <input type="number" id="filterRankExact" class="deck-search" placeholder="Rank" />
-            <input type="number" id="filterRankMin" class="deck-search" placeholder="Min rank" />
-            <input type="number" id="filterRankMax" class="deck-search" placeholder="Max rank" />
-
-            <input type="number" id="filterLinkExact" class="deck-search" placeholder="Link" />
-            <input type="number" id="filterLinkMin" class="deck-search" placeholder="Min link" />
-            <input type="number" id="filterLinkMax" class="deck-search" placeholder="Max link" />
           </div>
 
           <div class="binder-controls-spell-row spell-filter-row">

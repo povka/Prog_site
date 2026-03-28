@@ -1,6 +1,7 @@
 let deckData = {};
 let siteData = {};
 let currentBinderRows = [];
+let binderSortDirection = "asc";
 
 const deckSearch = document.getElementById("deckSearch");
 const deckSelector = document.getElementById("deckSelector");
@@ -21,25 +22,12 @@ const filterAtkExact = document.getElementById("filterAtkExact");
 const filterAtkMin = document.getElementById("filterAtkMin");
 const filterAtkMax = document.getElementById("filterAtkMax");
 
-const filterDefMin = document.getElementById("filterDefMin");
-
-const filterLevelMin = document.getElementById("filterLevelMin");
-const binderSort = document.getElementById("binderSort");
-const binderSortDirectionButton = document.getElementById("binderSortDirection");
-let binderSortDirection = "asc";
-
-const modal = document.getElementById("imageModal");
-const modalImage = document.getElementById("modalImage");
-const modalTitle = document.getElementById("modalTitle");
-const closeModalButton = document.getElementById("closeModal");
-
-const filterSpellType = document.getElementById("filterSpellType");
-const filterTrapType = document.getElementById("filterTrapType");
-
 const filterDefExact = document.getElementById("filterDefExact");
+const filterDefMin = document.getElementById("filterDefMin");
 const filterDefMax = document.getElementById("filterDefMax");
 
 const filterLevelExact = document.getElementById("filterLevelExact");
+const filterLevelMin = document.getElementById("filterLevelMin");
 const filterLevelMax = document.getElementById("filterLevelMax");
 
 const filterRankExact = document.getElementById("filterRankExact");
@@ -49,6 +37,22 @@ const filterRankMax = document.getElementById("filterRankMax");
 const filterLinkExact = document.getElementById("filterLinkExact");
 const filterLinkMin = document.getElementById("filterLinkMin");
 const filterLinkMax = document.getElementById("filterLinkMax");
+
+const filterScaleExact = document.getElementById("filterScaleExact");
+const filterScaleMin = document.getElementById("filterScaleMin");
+const filterScaleMax = document.getElementById("filterScaleMax");
+
+const filterSpellType = document.getElementById("filterSpellType");
+const filterTrapType = document.getElementById("filterTrapType");
+const filterLinkArrows = document.getElementById("filterLinkArrows");
+
+const binderSort = document.getElementById("binderSort");
+const binderSortDirectionButton = document.getElementById("binderSortDirection");
+
+const modal = document.getElementById("imageModal");
+const modalImage = document.getElementById("modalImage");
+const modalTitle = document.getElementById("modalTitle");
+const closeModalButton = document.getElementById("closeModal");
 
 function safeText(value) {
   return value ? String(value).trim() : "";
@@ -264,6 +268,37 @@ function getSelectedSubtypeValues() {
   ).map((input) => input.value);
 }
 
+function normalizeLinkArrow(value) {
+  return safeText(value).toLowerCase().replace(/[\s_]+/g, "-");
+}
+
+function getSelectedLinkArrowValues() {
+  return Array.from(
+    document.querySelectorAll('#filterLinkArrows input[type="checkbox"]:checked')
+  ).map((input) => input.value);
+}
+
+function getRowLinkArrows(row) {
+  const raw =
+    row.linkmarkers ??
+    row.linkMarkers ??
+    row.link_arrows ??
+    row.linkArrows ??
+    null;
+
+  if (Array.isArray(raw)) {
+    return raw.map(safeText).filter(Boolean);
+  }
+
+  const text = safeText(raw);
+  if (!text) return [];
+
+  return text
+    .split(/[,|/]+/)
+    .map((part) => safeText(part))
+    .filter(Boolean);
+}
+
 function isMonsterFilterMode() {
   const selectedType = safeText(filterType.value);
   return selectedType === "" || selectedType === "Monster";
@@ -332,6 +367,14 @@ function syncFilterVisibility() {
     filterLinkExact.value = "";
     filterLinkMin.value = "";
     filterLinkMax.value = "";
+
+    filterScaleExact.value = "";
+    filterScaleMin.value = "";
+    filterScaleMax.value = "";
+
+    document.querySelectorAll('#filterLinkArrows input[type="checkbox"]').forEach((input) => {
+      input.checked = false;
+    });
   } else {
     filterSubtypes.classList.remove("is-disabled");
   }
@@ -343,10 +386,6 @@ function syncFilterVisibility() {
   if (!showTrapRow) {
     filterTrapType.value = "";
   }
-}
-
-function isXyzMonster(row) {
-  return safeText(row.type).toLowerCase().includes("xyz");
 }
 
 function getSortValue(row, sortKey) {
@@ -361,10 +400,10 @@ function getSortValue(row, sortKey) {
       return isXyzMonster(row) ? toNumber(row.level) : null;
 
     case "link":
-      return toNumber(row.linkval ?? row.linkVal);
+      return isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null;
 
     case "scale":
-      return toNumber(row.scale);
+      return toNumber(row.scale ?? row.pendulum_scale ?? row.pendulumScale);
 
     case "atk":
       return toNumber(row.atk);
@@ -398,7 +437,10 @@ function updateSortDirectionButton() {
   const ascending = binderSortDirection === "asc";
   binderSortDirectionButton.textContent = ascending ? "↑" : "↓";
   binderSortDirectionButton.title = ascending ? "Ascending" : "Descending";
-  binderSortDirectionButton.setAttribute("aria-label", ascending ? "Sorting ascending" : "Sorting descending");
+  binderSortDirectionButton.setAttribute(
+    "aria-label",
+    ascending ? "Sorting ascending" : "Sorting descending"
+  );
 }
 
 function applyBinderFilters(rows) {
@@ -409,6 +451,7 @@ function applyBinderFilters(rows) {
   const selectedSpellType = safeText(filterSpellType.value);
   const selectedTrapType = safeText(filterTrapType.value);
   const selectedSubtypes = getSelectedSubtypeValues();
+  const selectedLinkArrows = getSelectedLinkArrowValues();
 
   const atkExact = toNumber(filterAtkExact.value);
   const minAtk = toNumber(filterAtkMin.value);
@@ -429,6 +472,10 @@ function applyBinderFilters(rows) {
   const linkExact = toNumber(filterLinkExact.value);
   const minLink = toNumber(filterLinkMin.value);
   const maxLink = toNumber(filterLinkMax.value);
+
+  const scaleExact = toNumber(filterScaleExact.value);
+  const minScale = toNumber(filterScaleMin.value);
+  const maxScale = toNumber(filterScaleMax.value);
 
   const useMonsterFilters = isMonsterFilterMode();
   const useSpellFilters = isSpellFilterMode();
@@ -457,6 +504,8 @@ function applyBinderFilters(rows) {
     const rowLevel = isXyzMonster(row) ? null : rawLevel;
     const rowRank = isXyzMonster(row) ? rawLevel : null;
     const rowLink = isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null;
+    const rowScale = toNumber(row.scale ?? row.pendulum_scale ?? row.pendulumScale);
+    const rowLinkArrows = getRowLinkArrows(row).map(normalizeLinkArrow);
 
     if (q && !searchable.includes(q)) return false;
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
@@ -529,28 +578,33 @@ function applyBinderFilters(rows) {
       if (rowLink === null || rowLink > maxLink) return false;
     }
 
+    if (useMonsterFilters && scaleExact !== null) {
+      if (rowScale === null || rowScale !== scaleExact) return false;
+    }
+    if (useMonsterFilters && minScale !== null) {
+      if (rowScale === null || rowScale < minScale) return false;
+    }
+    if (useMonsterFilters && maxScale !== null) {
+      if (rowScale === null || rowScale > maxScale) return false;
+    }
+
+    if (useMonsterFilters && selectedLinkArrows.length > 0) {
+      const matchesAllArrows = selectedLinkArrows.every((arrow) =>
+        rowLinkArrows.includes(normalizeLinkArrow(arrow))
+      );
+      if (!matchesAllArrows) return false;
+    }
+
     return true;
   });
 
-  switch (binderSort.value) {
-    case "name-desc":
-      filtered.sort((a, b) => safeText(b.name).localeCompare(safeText(a.name)));
-      break;
-    case "qty-desc":
-      filtered.sort((a, b) => (toNumber(b.quantity) ?? 0) - (toNumber(a.quantity) ?? 0));
-      break;
-    case "atk-desc":
-      filtered.sort((a, b) => (toNumber(b.atk) ?? -1) - (toNumber(a.atk) ?? -1));
-      break;
-    case "def-desc":
-      filtered.sort((a, b) => (toNumber(b.def) ?? -1) - (toNumber(a.def) ?? -1));
-      break;
-    case "level-desc":
-      filtered.sort((a, b) => (toNumber(b.level) ?? -1) - (toNumber(a.level) ?? -1));
-      break;
-    default:
-      filtered.sort((a, b) => safeText(a.name).localeCompare(safeText(b.name)));
-  }
+  const sortKey = binderSort.value;
+
+  filtered.sort((a, b) => {
+    const aValue = getSortValue(a, sortKey);
+    const bValue = getSortValue(b, sortKey);
+    return compareSortValues(aValue, bValue, binderSortDirection);
+  });
 
   return filtered;
 }
@@ -650,6 +704,16 @@ filterRankMax.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLinkExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLinkMin.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLinkMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterScaleExact.addEventListener("input", () => renderBinder(currentBinderRows));
+filterScaleMin.addEventListener("input", () => renderBinder(currentBinderRows));
+filterScaleMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterLinkArrows.addEventListener("change", (event) => {
+  if (event.target.matches('input[type="checkbox"]')) {
+    renderBinder(currentBinderRows);
+  }
+});
 
 binderPlayer.addEventListener("change", () => {
   syncFilterVisibility();
