@@ -196,6 +196,17 @@
             </div>
           </div>
 
+          <div class="binder-controls-sort-row">
+            <select id="binderSort" class="deck-select">
+              <option value="name-asc">Name A–Z</option>
+              <option value="name-desc">Name Z–A</option>
+              <option value="qty-desc">Quantity high–low</option>
+              <option value="atk-desc">ATK high–low</option>
+              <option value="def-desc">DEF high–low</option>
+              <option value="level-desc">Level high–low</option>
+            </select>
+          </div>
+
           <div class="binder-controls-bottom">
             <input type="number" id="filterAtkExact" class="deck-search monster-only-control" placeholder="ATK" />
             <input type="number" id="filterAtkMin" class="deck-search monster-only-control" placeholder="Min ATK" />
@@ -206,15 +217,6 @@
             <input type="number" id="filterDefMax" class="deck-search monster-only-control" placeholder="Max DEF" />
 
             <input type="number" id="filterLevelMin" class="deck-search monster-only-control" placeholder="Min level" />
-
-            <select id="binderSort" class="deck-select">
-              <option value="name-asc">Name A–Z</option>
-              <option value="name-desc">Name Z–A</option>
-              <option value="qty-desc">Quantity high–low</option>
-              <option value="atk-desc">ATK high–low</option>
-              <option value="def-desc">DEF high–low</option>
-              <option value="level-desc">Level high–low</option>
-            </select>
           </div>
         </div>
 
