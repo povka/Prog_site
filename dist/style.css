@@ -936,6 +936,14 @@ p{color:var(--ink-soft)}
   .binder-controls-bottom{
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
+
+  .binder-controls-sort-top-row{
+    grid-template-columns:1fr;
+  }
+
+  .binder-controls-sort-spacer{
+    display:none;
+  }
 }
 
 @media (max-width: 760px){
@@ -980,14 +988,6 @@ p{color:var(--ink-soft)}
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
 
-  .binder-controls-sort-row{
-    justify-content:stretch;
-  }
-
-  .binder-controls-sort-row .deck-select{
-    width:100%;
-  }
-
   #binders .deck-browser-card{
     padding-left:24px;
   }
@@ -1004,12 +1004,22 @@ p{color:var(--ink-soft)}
   color:#f3f6ff;
 }
 
-.binder-controls-sort-row{
-  display:flex;
-  justify-content:flex-end;
+.binder-controls-sort-top-row{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) minmax(240px, 0.95fr);
+  gap:12px;
+  align-items:stretch;
 }
 
-.binder-controls-sort-row .deck-select{
-  width:min(260px, 100%);
+.binder-controls-sort-spacer{
+  min-width:0;
+}
+
+.binder-controls-sort-box{
+  width:100%;
+}
+
+.binder-controls-sort-box .deck-select{
+  width:100%;
   font-weight:700;
 }
