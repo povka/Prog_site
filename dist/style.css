@@ -894,6 +894,18 @@ p{color:var(--ink-soft)}
   .binder-controls-bottom{
     grid-template-columns:repeat(3, minmax(0, 1fr));
   }
+
+  .binder-controls-monster-row{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .binder-controls-monster-row .subtype-panel{
+    grid-column:1 / -1;
+  }
+
+  .binder-controls-stats-row{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 980px){
@@ -944,6 +956,14 @@ p{color:var(--ink-soft)}
   .binder-controls-sort-spacer{
     display:none;
   }
+
+  .binder-controls-monster-row{
+    grid-template-columns:1fr;
+  }
+
+  .binder-controls-stats-row{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px){
@@ -988,6 +1008,10 @@ p{color:var(--ink-soft)}
     grid-template-columns:repeat(2, minmax(0, 1fr));
   }
 
+  .binder-controls-stats-row{
+    grid-template-columns:1fr;
+  }
+
   #binders .deck-browser-card{
     padding-left:24px;
   }
@@ -1004,13 +1028,6 @@ p{color:var(--ink-soft)}
   color:#f3f6ff;
 }
 
-.binder-controls-sort-top-row{
-  display:grid;
-  grid-template-columns:minmax(0, 2fr) minmax(240px, 0.95fr);
-  gap:12px;
-  align-items:stretch;
-}
-
 .binder-controls-sort-spacer{
   min-width:0;
 }
@@ -1019,16 +1036,54 @@ p{color:var(--ink-soft)}
   width:100%;
 }
 
-.binder-controls-sort-box .deck-select{
-  width:100%;
-  font-weight:700;
-}
-
 #binderPlayer,
 #binderSort{
   width:100%;
 }
 
 .spell-only-control.is-hidden{
+  display:none !important;
+}
+
+.binder-controls-sort-top-row{
+  display:grid;
+  grid-template-columns:minmax(0, 2fr) minmax(240px, 0.95fr);
+  gap:12px;
+  align-items:stretch;
+}
+
+.binder-controls-sort-box .deck-select{
+  width:100%;
+  font-weight:700;
+}
+
+.binder-controls-type-row{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+.binder-controls-monster-row{
+  display:grid;
+  grid-template-columns:minmax(140px, 0.7fr) minmax(160px, 0.9fr) minmax(0, 2.6fr);
+  gap:12px;
+  align-items:stretch;
+}
+
+.binder-controls-stats-row{
+  display:grid;
+  grid-template-columns:repeat(9, minmax(0, 1fr));
+  gap:12px;
+  align-items:stretch;
+}
+
+.binder-controls-spell-row{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+.monster-filter-row.is-hidden,
+.spell-filter-row.is-hidden{
   display:none !important;
 }

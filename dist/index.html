@@ -110,6 +110,7 @@
 
       <div class="card deck-browser-card">
         <div class="deck-browser-controls binder-controls">
+          
           <div class="binder-controls-top">
             <input
               type="text"
@@ -143,15 +144,17 @@
             </div>
           </div>
 
-          <div class="binder-controls-middle">
+          <div class="binder-controls-type-row">
             <select id="filterType" class="deck-select">
               <option value="">All Cards</option>
               <option value="Monster">Monster</option>
               <option value="Spell">Spell</option>
               <option value="Trap">Trap</option>
             </select>
+          </div>
 
-            <select id="filterAttribute" class="deck-select monster-only-control">
+          <div class="binder-controls-monster-row monster-filter-row">
+            <select id="filterAttribute" class="deck-select">
               <option value="">All Attribute</option>
               <option value="DARK">DARK</option>
               <option value="LIGHT">LIGHT</option>
@@ -162,7 +165,7 @@
               <option value="DIVINE">DIVINE</option>
             </select>
 
-            <select id="filterRace" class="deck-select monster-only-control">
+            <select id="filterRace" class="deck-select">
               <option value="">All Types</option>
               <option value="Aqua">Aqua</option>
               <option value="Beast">Beast</option>
@@ -192,17 +195,7 @@
               <option value="Zombie">Zombie</option>
             </select>
 
-            <select id="filterSpellType" class="deck-select spell-only-control">
-              <option value="">All Types</option>
-              <option value="Normal">Normal</option>
-              <option value="Continuous">Continuous</option>
-              <option value="Equip">Equip</option>
-              <option value="Field">Field</option>
-              <option value="Quick-Play">Quick-Play</option>
-              <option value="Ritual">Ritual</option>
-            </select>
-
-            <div id="filterSubtypes" class="subtype-panel monster-only-control" aria-label="Monster subtypes">
+            <div id="filterSubtypes" class="subtype-panel" aria-label="Monster subtypes">
               <span class="subtype-panel-title">Subtypes</span>
               <label class="subtype-chip"><input type="checkbox" value="Normal" /><span>Normal</span></label>
               <label class="subtype-chip"><input type="checkbox" value="Effect" /><span>Effect</span></label>
@@ -221,19 +214,32 @@
             </div>
           </div>
 
-          <div class="binder-controls-bottom">
-            <input type="number" id="filterAtkExact" class="deck-search monster-only-control" placeholder="ATK" />
-            <input type="number" id="filterAtkMin" class="deck-search monster-only-control" placeholder="Min ATK" />
-            <input type="number" id="filterAtkMax" class="deck-search monster-only-control" placeholder="Max ATK" />
+          <div class="binder-controls-stats-row monster-filter-row">
+            <input type="number" id="filterAtkExact" class="deck-search" placeholder="ATK" />
+            <input type="number" id="filterAtkMin" class="deck-search" placeholder="Min ATK" />
+            <input type="number" id="filterAtkMax" class="deck-search" placeholder="Max ATK" />
 
-            <input type="number" id="filterDefExact" class="deck-search monster-only-control" placeholder="DEF" />
-            <input type="number" id="filterDefMin" class="deck-search monster-only-control" placeholder="Min DEF" />
-            <input type="number" id="filterDefMax" class="deck-search monster-only-control" placeholder="Max DEF" />
+            <input type="number" id="filterDefExact" class="deck-search" placeholder="DEF" />
+            <input type="number" id="filterDefMin" class="deck-search" placeholder="Min DEF" />
+            <input type="number" id="filterDefMax" class="deck-search" placeholder="Max DEF" />
 
-            <input type="number" id="filterLevelExact" class="deck-search monster-only-control" placeholder="Level" />
-            <input type="number" id="filterLevelMin" class="deck-search monster-only-control" placeholder="Min level" />
-            <input type="number" id="filterLevelMax" class="deck-search monster-only-control" placeholder="Max level" />
+            <input type="number" id="filterLevelExact" class="deck-search" placeholder="Level" />
+            <input type="number" id="filterLevelMin" class="deck-search" placeholder="Min level" />
+            <input type="number" id="filterLevelMax" class="deck-search" placeholder="Max level" />
           </div>
+
+          <div class="binder-controls-spell-row spell-filter-row">
+            <select id="filterSpellType" class="deck-select">
+              <option value="">All Types</option>
+              <option value="Normal">Normal</option>
+              <option value="Continuous">Continuous</option>
+              <option value="Equip">Equip</option>
+              <option value="Field">Field</option>
+              <option value="Quick-Play">Quick-Play</option>
+              <option value="Ritual">Ritual</option>
+            </select>
+          </div>
+
         </div>
 
         <div id="binderStatus" class="deck-results-label">Loading binder...</div>

@@ -13,7 +13,6 @@ const binderGrid = document.getElementById("binderGrid");
 const binderStatus = document.getElementById("binderStatus");
 
 const filterType = document.getElementById("filterType");
-const filterSpellType = document.getElementById("filterSpellType");
 const filterAttribute = document.getElementById("filterAttribute");
 const filterRace = document.getElementById("filterRace");
 const filterSubtypes = document.getElementById("filterSubtypes");
@@ -22,19 +21,23 @@ const filterAtkExact = document.getElementById("filterAtkExact");
 const filterAtkMin = document.getElementById("filterAtkMin");
 const filterAtkMax = document.getElementById("filterAtkMax");
 
-const filterDefExact = document.getElementById("filterDefExact");
 const filterDefMin = document.getElementById("filterDefMin");
-const filterDefMax = document.getElementById("filterDefMax");
 
-const filterLevelExact = document.getElementById("filterLevelExact");
 const filterLevelMin = document.getElementById("filterLevelMin");
-const filterLevelMax = document.getElementById("filterLevelMax");
 const binderSort = document.getElementById("binderSort");
 
 const modal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
 const modalTitle = document.getElementById("modalTitle");
 const closeModalButton = document.getElementById("closeModal");
+
+const filterSpellType = document.getElementById("filterSpellType");
+
+const filterDefExact = document.getElementById("filterDefExact");
+const filterDefMax = document.getElementById("filterDefMax");
+
+const filterLevelExact = document.getElementById("filterLevelExact");
+const filterLevelMax = document.getElementById("filterLevelMax");
 
 function safeText(value) {
   return value ? String(value).trim() : "";
@@ -260,21 +263,20 @@ function isSpellFilterMode() {
   return selectedType === "" || selectedType === "Spell";
 }
 
-function syncMonsterOnlyFilterVisibility() {
-  const showMonsterOnly = isMonsterFilterMode();
-  const showSpellOnly = isSpellFilterMode();
+function syncFilterVisibility() {
+  const showMonsterRows = isMonsterFilterMode();
+  const showSpellRow = isSpellFilterMode();
 
-  document.querySelectorAll(".monster-only-control").forEach((el) => {
-    el.classList.toggle("is-hidden", !showMonsterOnly);
+  document.querySelectorAll(".monster-filter-row").forEach((row) => {
+    row.classList.toggle("is-hidden", !showMonsterRows);
   });
 
-  document.querySelectorAll(".spell-only-control").forEach((el) => {
-    el.classList.toggle("is-hidden", !showSpellOnly);
+  document.querySelectorAll(".spell-filter-row").forEach((row) => {
+    row.classList.toggle("is-hidden", !showSpellRow);
   });
 
-  if (!showMonsterOnly) {
+  if (!showMonsterRows) {
     filterAttribute.value = "";
-    filterAttribute.disabled = true;
     filterRace.value = "";
 
     document.querySelectorAll('#filterSubtypes input[type="checkbox"]').forEach((input) => {
@@ -294,11 +296,10 @@ function syncMonsterOnlyFilterVisibility() {
     filterLevelMin.value = "";
     filterLevelMax.value = "";
   } else {
-    filterAttribute.disabled = false;
     filterSubtypes.classList.remove("is-disabled");
   }
 
-  if (!showSpellOnly) {
+  if (!showSpellRow) {
     filterSpellType.value = "";
   }
 }
@@ -306,9 +307,9 @@ function syncMonsterOnlyFilterVisibility() {
 function applyBinderFilters(rows) {
   const q = binderSearch.value.trim().toLowerCase();
   const selectedType = safeText(filterType.value);
-  const selectedSpellType = safeText(filterSpellType.value);
   const selectedAttribute = safeText(filterAttribute.value).toUpperCase();
   const selectedRace = safeText(filterRace.value);
+  const selectedSpellType = safeText(filterSpellType.value);
   const selectedSubtypes = getSelectedSubtypeValues();
 
   const atkExact = toNumber(filterAtkExact.value);
@@ -323,7 +324,8 @@ function applyBinderFilters(rows) {
   const minLevel = toNumber(filterLevelMin.value);
   const maxLevel = toNumber(filterLevelMax.value);
 
-  const useMonsterOnly = isMonsterFilterMode();
+  const useMonsterFilters = isMonsterFilterMode();
+  const useSpellFilters = isSpellFilterMode();
 
   let filtered = rows.filter((row) => {
     const searchable = [
@@ -336,10 +338,7 @@ function applyBinderFilters(rows) {
       row.race,
       row.attribute,
       row.archetype
-    ]
-      .map(safeText)
-      .join(" ")
-      .toLowerCase();
+    ].map(safeText).join(" ").toLowerCase();
 
     const rowAttribute = safeText(row.attribute).toUpperCase();
     const rowType = safeText(row.type);
@@ -351,56 +350,48 @@ function applyBinderFilters(rows) {
     if (q && !searchable.includes(q)) return false;
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
 
-    if (useMonsterOnly && selectedAttribute && rowAttribute !== selectedAttribute) return false;
-    if (useMonsterOnly && selectedRace && rowRace !== selectedRace) return false;
+    if (useSpellFilters && selectedSpellType) {
+      if (getHighLevelType(row) !== "Spell" || rowRace !== selectedSpellType) return false;
+    }
 
-    if (useMonsterOnly && selectedSubtypes.length > 0) {
+    if (useMonsterFilters && selectedAttribute && rowAttribute !== selectedAttribute) return false;
+    if (useMonsterFilters && selectedRace && rowRace !== selectedRace) return false;
+
+    if (useMonsterFilters && selectedSubtypes.length > 0) {
       const matchesAllSelectedSubtypes = selectedSubtypes.every((subtype) =>
         rowType.toLowerCase().includes(subtype.toLowerCase())
       );
       if (!matchesAllSelectedSubtypes) return false;
     }
 
-    if (useMonsterOnly && atkExact !== null) {
+    if (useMonsterFilters && atkExact !== null) {
       if (rowAtk === null || rowAtk !== atkExact) return false;
     }
-
-    if (useMonsterOnly && minAtk !== null) {
+    if (useMonsterFilters && minAtk !== null) {
       if (rowAtk === null || rowAtk < minAtk) return false;
     }
-
-    if (useMonsterOnly && maxAtk !== null) {
+    if (useMonsterFilters && maxAtk !== null) {
       if (rowAtk === null || rowAtk > maxAtk) return false;
     }
 
-    if (useMonsterOnly && defExact !== null) {
+    if (useMonsterFilters && defExact !== null) {
       if (rowDef === null || rowDef !== defExact) return false;
     }
-
-    if (useMonsterOnly && minDef !== null) {
+    if (useMonsterFilters && minDef !== null) {
       if (rowDef === null || rowDef < minDef) return false;
     }
-
-    if (useMonsterOnly && maxDef !== null) {
+    if (useMonsterFilters && maxDef !== null) {
       if (rowDef === null || rowDef > maxDef) return false;
     }
 
-    if (useMonsterOnly && levelExact !== null) {
+    if (useMonsterFilters && levelExact !== null) {
       if (rowLevel === null || rowLevel !== levelExact) return false;
     }
-
-    if (useMonsterOnly && minLevel !== null) {
+    if (useMonsterFilters && minLevel !== null) {
       if (rowLevel === null || rowLevel < minLevel) return false;
     }
-
-    if (useMonsterOnly && maxLevel !== null) {
+    if (useMonsterFilters && maxLevel !== null) {
       if (rowLevel === null || rowLevel > maxLevel) return false;
-    }
-
-    if (isSpellFilterMode() && selectedSpellType) {
-      if (getHighLevelType(row) !== "Spell" || safeText(row.race) !== selectedSpellType) {
-        return false;
-      }
     }
 
     return true;
@@ -495,14 +486,13 @@ binderPlayer.addEventListener("change", () => {
 binderSearch.addEventListener("input", () => renderBinder(currentBinderRows));
 
 filterType.addEventListener("change", () => {
-  syncMonsterOnlyFilterVisibility();
+  syncFilterVisibility();
   renderBinder(currentBinderRows);
 });
 
-filterSpellType.addEventListener("change", () => renderBinder(currentBinderRows));
-
 filterAttribute.addEventListener("change", () => renderBinder(currentBinderRows));
 filterRace.addEventListener("change", () => renderBinder(currentBinderRows));
+filterSpellType.addEventListener("change", () => renderBinder(currentBinderRows));
 
 filterSubtypes.addEventListener("change", (event) => {
   if (event.target.matches('input[type="checkbox"]')) {
@@ -522,6 +512,11 @@ filterLevelExact.addEventListener("input", () => renderBinder(currentBinderRows)
 filterLevelMin.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLevelMax.addEventListener("input", () => renderBinder(currentBinderRows));
 
+binderPlayer.addEventListener("change", () => {
+  syncFilterVisibility();
+  loadBinder(binderPlayer.value);
+});
+
 binderSort.addEventListener("change", () => renderBinder(currentBinderRows));
 
 async function init() {
@@ -530,7 +525,7 @@ async function init() {
     loadDeckData()
   ]);
 
-  syncMonsterOnlyFilterVisibility();
+  syncFilterVisibility();
   loadBinder(binderPlayer.value);
 }
 
