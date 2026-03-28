@@ -25,7 +25,9 @@ const filterDefExact = document.getElementById("filterDefExact");
 const filterDefMin = document.getElementById("filterDefMin");
 const filterDefMax = document.getElementById("filterDefMax");
 
+const filterLevelExact = document.getElementById("filterLevelExact");
 const filterLevelMin = document.getElementById("filterLevelMin");
+const filterLevelMax = document.getElementById("filterLevelMax");
 const binderSort = document.getElementById("binderSort");
 
 const modal = document.getElementById("imageModal");
@@ -277,7 +279,9 @@ function syncMonsterOnlyFilterVisibility() {
     filterDefMin.value = "";
     filterDefMax.value = "";
 
+    filterLevelExact.value = "";
     filterLevelMin.value = "";
+    filterLevelMax.value = "";
   } else {
     filterAttribute.disabled = false;
     filterSubtypes.classList.remove("is-disabled");
@@ -299,7 +303,9 @@ function applyBinderFilters(rows) {
   const minDef = toNumber(filterDefMin.value);
   const maxDef = toNumber(filterDefMax.value);
 
+  const levelExact = toNumber(filterLevelExact.value);
   const minLevel = toNumber(filterLevelMin.value);
+  const maxLevel = toNumber(filterLevelMax.value);
 
   const useMonsterOnly = isMonsterFilterMode();
 
@@ -363,8 +369,16 @@ function applyBinderFilters(rows) {
       if (rowDef === null || rowDef > maxDef) return false;
     }
 
+    if (useMonsterOnly && levelExact !== null) {
+      if (rowLevel === null || rowLevel !== levelExact) return false;
+    }
+
     if (useMonsterOnly && minLevel !== null) {
       if (rowLevel === null || rowLevel < minLevel) return false;
+    }
+
+    if (useMonsterOnly && maxLevel !== null) {
+      if (rowLevel === null || rowLevel > maxLevel) return false;
     }
 
     return true;
@@ -480,7 +494,10 @@ filterDefExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterDefMin.addEventListener("input", () => renderBinder(currentBinderRows));
 filterDefMax.addEventListener("input", () => renderBinder(currentBinderRows));
 
+filterLevelExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLevelMin.addEventListener("input", () => renderBinder(currentBinderRows));
+filterLevelMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
 binderSort.addEventListener("change", () => renderBinder(currentBinderRows));
 
 async function init() {
