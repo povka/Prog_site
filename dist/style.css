@@ -1087,3 +1087,13 @@ p{color:var(--ink-soft)}
 .spell-filter-row.is-hidden{
   display:none !important;
 }
+
+.binder-controls-trap-row{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+.trap-filter-row.is-hidden{
+  display:none !important;
+}

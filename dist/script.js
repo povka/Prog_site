@@ -32,6 +32,7 @@ const modalTitle = document.getElementById("modalTitle");
 const closeModalButton = document.getElementById("closeModal");
 
 const filterSpellType = document.getElementById("filterSpellType");
+const filterTrapType = document.getElementById("filterTrapType");
 
 const filterDefExact = document.getElementById("filterDefExact");
 const filterDefMax = document.getElementById("filterDefMax");
@@ -263,9 +264,15 @@ function isSpellFilterMode() {
   return selectedType === "" || selectedType === "Spell";
 }
 
+function isTrapFilterMode() {
+  const selectedType = safeText(filterType.value);
+  return selectedType === "" || selectedType === "Trap";
+}
+
 function syncFilterVisibility() {
   const showMonsterRows = isMonsterFilterMode();
   const showSpellRow = isSpellFilterMode();
+  const showTrapRow = isTrapFilterMode();
 
   document.querySelectorAll(".monster-filter-row").forEach((row) => {
     row.classList.toggle("is-hidden", !showMonsterRows);
@@ -273,6 +280,10 @@ function syncFilterVisibility() {
 
   document.querySelectorAll(".spell-filter-row").forEach((row) => {
     row.classList.toggle("is-hidden", !showSpellRow);
+  });
+
+  document.querySelectorAll(".trap-filter-row").forEach((row) => {
+    row.classList.toggle("is-hidden", !showTrapRow);
   });
 
   if (!showMonsterRows) {
@@ -302,6 +313,10 @@ function syncFilterVisibility() {
   if (!showSpellRow) {
     filterSpellType.value = "";
   }
+
+  if (!showTrapRow) {
+    filterTrapType.value = "";
+  }
 }
 
 function applyBinderFilters(rows) {
@@ -326,6 +341,9 @@ function applyBinderFilters(rows) {
 
   const useMonsterFilters = isMonsterFilterMode();
   const useSpellFilters = isSpellFilterMode();
+
+  const selectedTrapType = safeText(filterTrapType.value);
+  const useTrapFilters = isTrapFilterMode();
 
   let filtered = rows.filter((row) => {
     const searchable = [
@@ -352,6 +370,10 @@ function applyBinderFilters(rows) {
 
     if (useSpellFilters && selectedSpellType) {
       if (getHighLevelType(row) !== "Spell" || rowRace !== selectedSpellType) return false;
+    }
+
+    if (useTrapFilters && selectedTrapType) {
+      if (getHighLevelType(row) !== "Trap" || rowRace !== selectedTrapType) return false;
     }
 
     if (useMonsterFilters && selectedAttribute && rowAttribute !== selectedAttribute) return false;
@@ -493,6 +515,7 @@ filterType.addEventListener("change", () => {
 filterAttribute.addEventListener("change", () => renderBinder(currentBinderRows));
 filterRace.addEventListener("change", () => renderBinder(currentBinderRows));
 filterSpellType.addEventListener("change", () => renderBinder(currentBinderRows));
+filterTrapType.addEventListener("change", () => renderBinder(currentBinderRows));
 
 filterSubtypes.addEventListener("change", (event) => {
   if (event.target.matches('input[type="checkbox"]')) {
