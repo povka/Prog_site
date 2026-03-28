@@ -42,6 +42,14 @@ const filterDefMax = document.getElementById("filterDefMax");
 const filterLevelExact = document.getElementById("filterLevelExact");
 const filterLevelMax = document.getElementById("filterLevelMax");
 
+const filterRankExact = document.getElementById("filterRankExact");
+const filterRankMin = document.getElementById("filterRankMin");
+const filterRankMax = document.getElementById("filterRankMax");
+
+const filterLinkExact = document.getElementById("filterLinkExact");
+const filterLinkMin = document.getElementById("filterLinkMin");
+const filterLinkMax = document.getElementById("filterLinkMax");
+
 function safeText(value) {
   return value ? String(value).trim() : "";
 }
@@ -271,6 +279,14 @@ function isTrapFilterMode() {
   return selectedType === "" || selectedType === "Trap";
 }
 
+function isXyzMonster(row) {
+  return safeText(row.type).toLowerCase().includes("xyz");
+}
+
+function isLinkMonster(row) {
+  return safeText(row.type).toLowerCase().includes("link");
+}
+
 function syncFilterVisibility() {
   const showMonsterRows = isMonsterFilterMode();
   const showSpellRow = isSpellFilterMode();
@@ -308,6 +324,14 @@ function syncFilterVisibility() {
     filterLevelExact.value = "";
     filterLevelMin.value = "";
     filterLevelMax.value = "";
+
+    filterRankExact.value = "";
+    filterRankMin.value = "";
+    filterRankMax.value = "";
+
+    filterLinkExact.value = "";
+    filterLinkMin.value = "";
+    filterLinkMax.value = "";
   } else {
     filterSubtypes.classList.remove("is-disabled");
   }
@@ -383,6 +407,7 @@ function applyBinderFilters(rows) {
   const selectedAttribute = safeText(filterAttribute.value).toUpperCase();
   const selectedRace = safeText(filterRace.value);
   const selectedSpellType = safeText(filterSpellType.value);
+  const selectedTrapType = safeText(filterTrapType.value);
   const selectedSubtypes = getSelectedSubtypeValues();
 
   const atkExact = toNumber(filterAtkExact.value);
@@ -397,10 +422,16 @@ function applyBinderFilters(rows) {
   const minLevel = toNumber(filterLevelMin.value);
   const maxLevel = toNumber(filterLevelMax.value);
 
+  const rankExact = toNumber(filterRankExact.value);
+  const minRank = toNumber(filterRankMin.value);
+  const maxRank = toNumber(filterRankMax.value);
+
+  const linkExact = toNumber(filterLinkExact.value);
+  const minLink = toNumber(filterLinkMin.value);
+  const maxLink = toNumber(filterLinkMax.value);
+
   const useMonsterFilters = isMonsterFilterMode();
   const useSpellFilters = isSpellFilterMode();
-
-  const selectedTrapType = safeText(filterTrapType.value);
   const useTrapFilters = isTrapFilterMode();
 
   let filtered = rows.filter((row) => {
@@ -419,9 +450,13 @@ function applyBinderFilters(rows) {
     const rowAttribute = safeText(row.attribute).toUpperCase();
     const rowType = safeText(row.type);
     const rowRace = safeText(row.race);
+
+    const rawLevel = toNumber(row.level);
     const rowAtk = toNumber(row.atk);
     const rowDef = toNumber(row.def);
-    const rowLevel = toNumber(row.level);
+    const rowLevel = isXyzMonster(row) ? null : rawLevel;
+    const rowRank = isXyzMonster(row) ? rawLevel : null;
+    const rowLink = isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null;
 
     if (q && !searchable.includes(q)) return false;
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
@@ -474,16 +509,48 @@ function applyBinderFilters(rows) {
       if (rowLevel === null || rowLevel > maxLevel) return false;
     }
 
+    if (useMonsterFilters && rankExact !== null) {
+      if (rowRank === null || rowRank !== rankExact) return false;
+    }
+    if (useMonsterFilters && minRank !== null) {
+      if (rowRank === null || rowRank < minRank) return false;
+    }
+    if (useMonsterFilters && maxRank !== null) {
+      if (rowRank === null || rowRank > maxRank) return false;
+    }
+
+    if (useMonsterFilters && linkExact !== null) {
+      if (rowLink === null || rowLink !== linkExact) return false;
+    }
+    if (useMonsterFilters && minLink !== null) {
+      if (rowLink === null || rowLink < minLink) return false;
+    }
+    if (useMonsterFilters && maxLink !== null) {
+      if (rowLink === null || rowLink > maxLink) return false;
+    }
+
     return true;
   });
 
-  const sortKey = binderSort.value;
-
-  filtered.sort((a, b) => {
-    const aValue = getSortValue(a, sortKey);
-    const bValue = getSortValue(b, sortKey);
-    return compareSortValues(aValue, bValue, binderSortDirection);
-  });
+  switch (binderSort.value) {
+    case "name-desc":
+      filtered.sort((a, b) => safeText(b.name).localeCompare(safeText(a.name)));
+      break;
+    case "qty-desc":
+      filtered.sort((a, b) => (toNumber(b.quantity) ?? 0) - (toNumber(a.quantity) ?? 0));
+      break;
+    case "atk-desc":
+      filtered.sort((a, b) => (toNumber(b.atk) ?? -1) - (toNumber(a.atk) ?? -1));
+      break;
+    case "def-desc":
+      filtered.sort((a, b) => (toNumber(b.def) ?? -1) - (toNumber(a.def) ?? -1));
+      break;
+    case "level-desc":
+      filtered.sort((a, b) => (toNumber(b.level) ?? -1) - (toNumber(a.level) ?? -1));
+      break;
+    default:
+      filtered.sort((a, b) => safeText(a.name).localeCompare(safeText(b.name)));
+  }
 
   return filtered;
 }
@@ -575,6 +642,14 @@ filterDefMax.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLevelExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLevelMin.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLevelMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterRankExact.addEventListener("input", () => renderBinder(currentBinderRows));
+filterRankMin.addEventListener("input", () => renderBinder(currentBinderRows));
+filterRankMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterLinkExact.addEventListener("input", () => renderBinder(currentBinderRows));
+filterLinkMin.addEventListener("input", () => renderBinder(currentBinderRows));
+filterLinkMax.addEventListener("input", () => renderBinder(currentBinderRows));
 
 binderPlayer.addEventListener("change", () => {
   syncFilterVisibility();
