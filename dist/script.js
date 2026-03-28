@@ -55,6 +55,10 @@ const filterScaleMin = document.getElementById("filterScaleMin");
 const filterScaleMax = document.getElementById("filterScaleMax");
 const filterLinkArrows = document.getElementById("filterLinkArrows");
 
+const binderFiltersPanel = document.getElementById("binderFiltersPanel");
+const toggleFiltersButton = document.getElementById("toggleFiltersButton");
+let binderFiltersCollapsed = false;
+
 function safeText(value) {
   return value ? String(value).trim() : "";
 }
@@ -482,6 +486,20 @@ function compareSortValues(aValue, bValue, direction) {
   return direction === "asc" ? result : -result;
 }
 
+function updateFiltersToggleButton() {
+  const expanded = !binderFiltersCollapsed;
+
+  toggleFiltersButton.textContent = expanded ? "Hide filters" : "Show filters";
+  toggleFiltersButton.title = expanded ? "Hide filters" : "Show filters";
+  toggleFiltersButton.setAttribute("aria-expanded", String(expanded));
+}
+
+function setBinderFiltersCollapsed(collapsed) {
+  binderFiltersCollapsed = collapsed;
+  binderFiltersPanel.classList.toggle("is-collapsed", collapsed);
+  updateFiltersToggleButton();
+}
+
 function updateSortDirectionButton() {
   const ascending = binderSortDirection === "asc";
   binderSortDirectionButton.textContent = ascending ? "↑" : "↓";
@@ -783,6 +801,10 @@ binderSortDirectionButton.addEventListener("click", () => {
   renderBinder(currentBinderRows);
 });
 
+toggleFiltersButton.addEventListener("click", () => {
+  setBinderFiltersCollapsed(!binderFiltersCollapsed);
+});
+
 async function init() {
   await Promise.all([
     loadSiteData(),
@@ -791,6 +813,7 @@ async function init() {
 
   syncFilterVisibility();
   updateSortDirectionButton();
+  updateFiltersToggleButton();
   loadBinder(binderPlayer.value);
 }
 
