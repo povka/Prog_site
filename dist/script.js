@@ -71,6 +71,14 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function parseMultiSearchTerms(value) {
+  return safeText(value)
+    .toLowerCase()
+    .split("|")
+    .map((term) => term.trim())
+    .filter(Boolean);
+}
+
 function openModal(src, title) {
   modalImage.src = src;
   modalImage.alt = title;
@@ -508,7 +516,7 @@ function updateSortDirectionButton() {
 }
 
 function applyBinderFilters(rows) {
-  const q = binderSearch.value.trim().toLowerCase();
+  const searchTerms = parseMultiSearchTerms(binderSearch.value);
   const selectedType = safeText(filterType.value);
   const selectedAttribute = safeText(filterAttribute.value).toUpperCase();
   const selectedRace = safeText(filterRace.value);
@@ -572,7 +580,10 @@ function applyBinderFilters(rows) {
     const rowScale = toNumber(row.scale);
     const rowLinkArrows = getRowLinkArrows(row);
 
-    if (q && !searchable.includes(q)) return false;
+    if (searchTerms.length > 0) {
+      const matchesAnySearchTerm = searchTerms.some((term) => searchable.includes(term));
+      if (!matchesAnySearchTerm) return false;
+    }
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
 
     if (useSpellFilters && selectedSpellType) {
