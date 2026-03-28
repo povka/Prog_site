@@ -249,6 +249,25 @@
             <input type="number" id="filterLinkMax" class="deck-search" placeholder="Max link" />
           </div>
 
+          <div class="binder-controls-scale-arrows-row monster-filter-row">
+            <input type="number" id="filterScaleExact" class="deck-search" placeholder="Pendulum scale" />
+            <input type="number" id="filterScaleMin" class="deck-search" placeholder="Min scale" />
+            <input type="number" id="filterScaleMax" class="deck-search" placeholder="Max scale" />
+
+            <div id="filterLinkArrows" class="subtype-panel" aria-label="Link arrows">
+              <span class="subtype-panel-title">Link Arrows</span>
+
+              <label class="subtype-chip"><input type="checkbox" value="Top-Left" /><span>↖ Top-Left</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Top" /><span>↑ Top</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Top-Right" /><span>↗ Top-Right</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Left" /><span>← Left</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Right" /><span>→ Right</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Bottom-Left" /><span>↙ Bottom-Left</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Bottom" /><span>↓ Bottom</span></label>
+              <label class="subtype-chip"><input type="checkbox" value="Bottom-Right" /><span>↘ Bottom-Right</span></label>
+            </div>
+          </div>
+
           <div class="binder-controls-spell-row spell-filter-row">
             <select id="filterSpellType" class="deck-select">
               <option value="">Any Spells</option>

@@ -50,6 +50,11 @@ const filterLinkExact = document.getElementById("filterLinkExact");
 const filterLinkMin = document.getElementById("filterLinkMin");
 const filterLinkMax = document.getElementById("filterLinkMax");
 
+const filterScaleExact = document.getElementById("filterScaleExact");
+const filterScaleMin = document.getElementById("filterScaleMin");
+const filterScaleMax = document.getElementById("filterScaleMax");
+const filterLinkArrows = document.getElementById("filterLinkArrows");
+
 function safeText(value) {
   return value ? String(value).trim() : "";
 }
@@ -264,6 +269,79 @@ function getSelectedSubtypeValues() {
   ).map((input) => input.value);
 }
 
+function getSelectedLinkArrowValues() {
+  return Array.from(
+    document.querySelectorAll('#filterLinkArrows input[type="checkbox"]:checked')
+  ).map((input) => input.value);
+}
+
+function normalizeLinkArrow(value) {
+  const normalized = safeText(value)
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
+
+  switch (normalized) {
+    case "top-left":
+    case "up-left":
+    case "upleft":
+      return "Top-Left";
+
+    case "top":
+    case "up":
+      return "Top";
+
+    case "top-right":
+    case "up-right":
+    case "upright":
+      return "Top-Right";
+
+    case "left":
+      return "Left";
+
+    case "right":
+      return "Right";
+
+    case "bottom-left":
+    case "down-left":
+    case "downleft":
+      return "Bottom-Left";
+
+    case "bottom":
+    case "down":
+      return "Bottom";
+
+    case "bottom-right":
+    case "down-right":
+    case "downright":
+      return "Bottom-Right";
+
+    default:
+      return "";
+  }
+}
+
+function getRowLinkArrows(row) {
+  const raw =
+    row.linkmarkers ??
+    row.linkMarkers ??
+    row.link_arrows ??
+    row.linkArrows ??
+    [];
+
+  if (Array.isArray(raw)) {
+    return raw.map(normalizeLinkArrow).filter(Boolean);
+  }
+
+  if (typeof raw === "string") {
+    return raw
+      .split(/[,|/]+/)
+      .map((part) => normalizeLinkArrow(part))
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function isMonsterFilterMode() {
   const selectedType = safeText(filterType.value);
   return selectedType === "" || selectedType === "Monster";
@@ -332,8 +410,18 @@ function syncFilterVisibility() {
     filterLinkExact.value = "";
     filterLinkMin.value = "";
     filterLinkMax.value = "";
+
+    filterScaleExact.value = "";
+    filterScaleMin.value = "";
+    filterScaleMax.value = "";
+
+    document.querySelectorAll('#filterLinkArrows input[type="checkbox"]').forEach((input) => {
+      input.checked = false;
+    });
+    filterLinkArrows.classList.add("is-disabled");
   } else {
     filterSubtypes.classList.remove("is-disabled");
+    filterLinkArrows.classList.remove("is-disabled");
   }
 
   if (!showSpellRow) {
@@ -430,6 +518,12 @@ function applyBinderFilters(rows) {
   const minLink = toNumber(filterLinkMin.value);
   const maxLink = toNumber(filterLinkMax.value);
 
+  const scaleExact = toNumber(filterScaleExact.value);
+  const minScale = toNumber(filterScaleMin.value);
+  const maxScale = toNumber(filterScaleMax.value);
+
+  const selectedLinkArrows = getSelectedLinkArrowValues();
+
   const useMonsterFilters = isMonsterFilterMode();
   const useSpellFilters = isSpellFilterMode();
   const useTrapFilters = isTrapFilterMode();
@@ -457,6 +551,8 @@ function applyBinderFilters(rows) {
     const rowLevel = isXyzMonster(row) ? null : rawLevel;
     const rowRank = isXyzMonster(row) ? rawLevel : null;
     const rowLink = isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null;
+    const rowScale = toNumber(row.scale);
+    const rowLinkArrows = getRowLinkArrows(row);
 
     if (q && !searchable.includes(q)) return false;
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
@@ -528,29 +624,42 @@ function applyBinderFilters(rows) {
     if (useMonsterFilters && maxLink !== null) {
       if (rowLink === null || rowLink > maxLink) return false;
     }
+        if (useMonsterFilters && scaleExact !== null) {
+      if (rowScale === null || rowScale !== scaleExact) return false;
+    }
+    if (useMonsterFilters && minScale !== null) {
+      if (rowScale === null || rowScale < minScale) return false;
+    }
+    if (useMonsterFilters && maxScale !== null) {
+      if (rowScale === null || rowScale > maxScale) return false;
+    }
+
+    if (useMonsterFilters && selectedLinkArrows.length > 0) {
+      if (!isLinkMonster(row)) return false;
+
+      const matchesAllSelectedArrows = selectedLinkArrows.every((arrow) =>
+        rowLinkArrows.includes(arrow)
+      );
+
+      if (!matchesAllSelectedArrows) return false;
+    }
 
     return true;
   });
 
-  switch (binderSort.value) {
-    case "name-desc":
-      filtered.sort((a, b) => safeText(b.name).localeCompare(safeText(a.name)));
-      break;
-    case "qty-desc":
-      filtered.sort((a, b) => (toNumber(b.quantity) ?? 0) - (toNumber(a.quantity) ?? 0));
-      break;
-    case "atk-desc":
-      filtered.sort((a, b) => (toNumber(b.atk) ?? -1) - (toNumber(a.atk) ?? -1));
-      break;
-    case "def-desc":
-      filtered.sort((a, b) => (toNumber(b.def) ?? -1) - (toNumber(a.def) ?? -1));
-      break;
-    case "level-desc":
-      filtered.sort((a, b) => (toNumber(b.level) ?? -1) - (toNumber(a.level) ?? -1));
-      break;
-    default:
-      filtered.sort((a, b) => safeText(a.name).localeCompare(safeText(b.name)));
-  }
+    filtered.sort((a, b) => {
+    const result = compareSortValues(
+      getSortValue(a, binderSort.value),
+      getSortValue(b, binderSort.value),
+      binderSortDirection
+    );
+
+    if (result !== 0) return result;
+
+    return safeText(a.name).localeCompare(safeText(b.name), undefined, {
+      sensitivity: "base"
+    });
+  });
 
   return filtered;
 }
@@ -650,6 +759,16 @@ filterRankMax.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLinkExact.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLinkMin.addEventListener("input", () => renderBinder(currentBinderRows));
 filterLinkMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterScaleExact.addEventListener("input", () => renderBinder(currentBinderRows));
+filterScaleMin.addEventListener("input", () => renderBinder(currentBinderRows));
+filterScaleMax.addEventListener("input", () => renderBinder(currentBinderRows));
+
+filterLinkArrows.addEventListener("change", (event) => {
+  if (event.target.matches('input[type="checkbox"]')) {
+    renderBinder(currentBinderRows);
+  }
+});
 
 binderPlayer.addEventListener("change", () => {
   syncFilterVisibility();
