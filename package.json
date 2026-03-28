@@ -1,0 +1,27 @@
+{
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  },
+  "name": "prog_site",
+  "version": "1.0.0",
+  "description": "A static Yu-Gi-Oh! progression site for tracking weekly results, browsing decklists, and viewing each player’s binder.",
+  "main": "index.js",
+  "dependencies": {
+    "playwright-core": "^1.58.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/povka/Prog_site.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/povka/Prog_site/issues"
+  },
+  "homepage": "https://github.com/povka/Prog_site#readme"
+}
