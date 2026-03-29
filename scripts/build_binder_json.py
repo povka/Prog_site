@@ -192,154 +192,285 @@ def login_and_get_fresh_token(username, password, owner):
     if not username or not password:
         raise RuntimeError(f"Missing YGO Prog username/password for {owner}")
 
-    captured = {"token": ""}
+    captured = {
+        "token": "",
+        "requests": [],
+        "responses": [],
+    }
 
-    def _capture_token_from_response(response):
-        if captured["token"]:
-            return
-
+    def _record_request(request):
         try:
-            content_type = (response.headers or {}).get("content-type", "")
+            auth = request.headers.get("authorization", "")
         except Exception:
-            content_type = ""
+            auth = ""
 
-        if "application/json" not in content_type.lower():
-            return
+        entry = {
+            "url": request.url,
+            "method": request.method,
+            "has_auth": bool(auth),
+            "auth_prefix": auth[:20] if auth else "",
+        }
+        captured["requests"].append(entry)
 
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
+            if JWT_RE.match(token):
+                captured["token"] = token
+
+    def _record_response(response):
         try:
-            data = response.json()
+            url = response.url
+            status = response.status
+            headers = response.headers
         except Exception:
             return
 
-        if isinstance(data, dict):
-            for key in ("token", "accessToken", "jwt", "authToken"):
-                value = data.get(key)
-                if isinstance(value, str) and JWT_RE.match(value.strip()):
-                    captured["token"] = value.strip()
-                    return
+        content_type = (headers or {}).get("content-type", "")
+        entry = {
+            "url": url,
+            "status": status,
+            "content_type": content_type,
+        }
 
-    def _open_login_ui(page):
-        js_clicks = [
-            """
-            () => {
-                const el = document.querySelector('u.in-text-link[title="Open login modal"]');
-                if (!el) return false;
-                el.click();
-                return true;
-            }
-            """,
-            """
-            () => {
-                const el = document.querySelector('#account-nav-dropdown-box .topbar-link');
-                if (!el) return false;
-                el.click();
-                return true;
-            }
-            """,
-            """
-            () => {
-                const els = [...document.querySelectorAll('*')];
-                const el = els.find(x => (x.textContent || '').trim() === 'Log In');
-                if (!el) return false;
-                el.click();
-                return true;
-            }
-            """
-        ]
-
-        for script in js_clicks:
+        body_preview = ""
+        if "application/json" in content_type.lower():
             try:
-                clicked = page.evaluate(script)
-                if clicked:
-                    page.wait_for_timeout(2500)
-                    try:
-                        page.wait_for_function(
-                            """
-                            () => {
-                                const modal = document.querySelector('#global-modal-content');
-                                if (!modal) return false;
-                                return modal.querySelector('input') !== null || modal.textContent.trim().length > 0;
-                            }
-                            """,
-                            timeout=5000,
-                        )
-                    except Exception:
-                        pass
-
-                    if page.locator('#global-modal-content input').count() > 0:
-                        return True
+                data = response.json()
+                entry["json_keys"] = list(data.keys()) if isinstance(data, dict) else []
+                if isinstance(data, dict):
+                    for key in ("token", "accessToken", "jwt", "authToken"):
+                        value = data.get(key)
+                        if isinstance(value, str) and JWT_RE.match(value.strip()):
+                            captured["token"] = value.strip()
+                    body_preview = json.dumps(data)[:1000]
             except Exception:
                 pass
 
-        return False
+        if body_preview:
+            entry["body_preview"] = body_preview
 
-    def _locate_inputs(page):
-        page.wait_for_timeout(2500)
+        captured["responses"].append(entry)
 
-        username_input = _find_username_input(page)
-        password_input = _find_password_input(page)
-        if username_input and password_input:
-            return username_input, password_input
+    def _write_auth_debug(page, suffix="final"):
+        debug_json = DEBUG_DIR / f"{owner}-auth-debug-{suffix}.json"
+        debug_png = DEBUG_DIR / f"{owner}-login-debug-{suffix}.png"
+        debug_html = DEBUG_DIR / f"{owner}-login-debug-{suffix}.html"
 
-        _open_login_ui(page)
-        page.wait_for_timeout(2000)
+        client_capture = {}
+        try:
+            client_capture = page.evaluate(
+                """
+                () => {
+                    const readStore = (store) => {
+                        const out = {};
+                        for (let i = 0; i < store.length; i++) {
+                            const k = store.key(i);
+                            out[k] = store.getItem(k);
+                        }
+                        return out;
+                    };
 
-        username_input = _find_username_input(page)
-        password_input = _find_password_input(page)
-        if username_input and password_input:
-            return username_input, password_input
+                    return {
+                        href: location.href,
+                        title: document.title,
+                        globalModalHtml: document.querySelector('#global-modal-content')?.innerHTML || '',
+                        globalModalText: document.querySelector('#global-modal-content')?.textContent || '',
+                        hasGlobalModalInput: !!document.querySelector('#global-modal-content input'),
+                        localStorage: readStore(window.localStorage),
+                        sessionStorage: readStore(window.sessionStorage),
+                        authCapture: window.__authCapture || null,
+                    };
+                }
+                """
+            )
+        except Exception as e:
+            client_capture = {"error": str(e)}
 
-        return username_input, password_input
+        payload = {
+            "captured_token": bool(captured["token"]),
+            "requests": captured["requests"][-50:],
+            "responses": captured["responses"][-50:],
+            "client_capture": client_capture,
+        }
+
+        try:
+            debug_json.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+
+        try:
+            page.screenshot(path=str(debug_png), full_page=True)
+        except Exception:
+            pass
+
+        try:
+            debug_html.write_text(page.content(), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _extract_client_token(page):
+        try:
+            result = page.evaluate(
+                """
+                () => {
+                    const jwt = /^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/;
+
+                    const checkStore = (store) => {
+                        for (let i = 0; i < store.length; i++) {
+                            const key = store.key(i) || "";
+                            const value = store.getItem(key) || "";
+                            if (jwt.test(value)) return value;
+                            if (/token|auth|jwt/i.test(key) && value && jwt.test(value)) return value;
+                        }
+                        return "";
+                    };
+
+                    if (window.__authCapture?.token && jwt.test(window.__authCapture.token)) {
+                        return window.__authCapture.token;
+                    }
+
+                    const local = checkStore(window.localStorage);
+                    if (local) return local;
+
+                    const session = checkStore(window.sessionStorage);
+                    if (session) return session;
+
+                    return "";
+                }
+                """
+            )
+            return (result or "").strip()
+        except Exception:
+            return ""
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
 
-        # Block ad / consent / funding scripts that are clearly present in the debug HTML.
         context.route(
             "**/*",
             lambda route: route.abort()
             if any(
-                blocked in route.request.url
-                for blocked in [
+                bad in route.request.url
+                for bad in [
                     "googlesyndication.com",
                     "doubleclick.net",
                     "googleadservices.com",
                     "fundingchoicesmessages.google.com",
-                    "adsbygoogle.js",
                 ]
             )
             else route.continue_()
         )
 
+        context.add_init_script(
+            """
+            (() => {
+                const jwt = /^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/;
+                window.__authCapture = { token: "", requests: [], responses: [] };
+
+                const trySetToken = (value) => {
+                    if (typeof value === "string" && jwt.test(value)) {
+                        window.__authCapture.token = value;
+                    }
+                };
+
+                const origFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    const req = args[1] || {};
+                    const headers = req.headers || {};
+                    let auth = "";
+
+                    if (headers instanceof Headers) {
+                        auth = headers.get("authorization") || "";
+                    } else if (typeof headers === "object") {
+                        auth = headers.Authorization || headers.authorization || "";
+                    }
+
+                    if (typeof auth === "string" && auth.toLowerCase().startsWith("bearer ")) {
+                        trySetToken(auth.slice(7).trim());
+                    }
+
+                    const res = await origFetch(...args);
+
+                    try {
+                        const clone = res.clone();
+                        const ct = clone.headers.get("content-type") || "";
+                        if (ct.includes("application/json")) {
+                            const data = await clone.json();
+                            if (data && typeof data === "object") {
+                                ["token", "accessToken", "jwt", "authToken"].forEach((k) => {
+                                    if (typeof data[k] === "string") trySetToken(data[k]);
+                                });
+                            }
+                        }
+                    } catch {}
+
+                    return res;
+                };
+
+                const origSetItem = Storage.prototype.setItem;
+                Storage.prototype.setItem = function(k, v) {
+                    trySetToken(v);
+                    return origSetItem.call(this, k, v);
+                };
+
+                const origOpen = XMLHttpRequest.prototype.open;
+                const origSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+                XMLHttpRequest.prototype.open = function(...args) {
+                    this.__url = args[1];
+                    return origOpen.apply(this, args);
+                };
+                XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+                    if (String(name).toLowerCase() === "authorization" && String(value).toLowerCase().startsWith("bearer ")) {
+                        trySetToken(String(value).slice(7).trim());
+                    }
+                    return origSetHeader.apply(this, [name, value]);
+                };
+            })();
+            """
+        )
+
         page = context.new_page()
-
-        def capture_request(request):
-            auth = request.headers.get("authorization", "")
-            if auth.lower().startswith("bearer "):
-                captured["token"] = auth[7:].strip()
-
-        page.on("request", capture_request)
-        page.on("response", _capture_token_from_response)
+        page.on("request", _record_request)
+        page.on("response", _record_response)
 
         page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
         page.wait_for_timeout(3000)
 
-        username_input, password_input = _locate_inputs(page)
+        opened = False
+
+        for locator in [
+            page.locator('u.in-text-link[title="Open login modal"]'),
+            page.locator('#account-nav-dropdown-box .topbar-link'),
+            page.get_by_text("Log In", exact=True),
+        ]:
+            try:
+                locator.first.wait_for(state="visible", timeout=3000)
+                locator.first.click(force=True, timeout=3000)
+                page.wait_for_timeout(2500)
+                opened = True
+                break
+            except Exception:
+                pass
+
+        _write_auth_debug(page, "after-open-attempt")
+
+        username_input = _find_username_input(page)
+        password_input = _find_password_input(page)
 
         if not username_input or not password_input:
-            _write_login_debug(page, owner)
             browser.close()
             raise RuntimeError(
                 f"Could not find login fields for {owner}. "
-                f"Check debug/{owner}-login-debug.png and debug/{owner}-login-debug.html."
+                f"Check debug/{owner}-login-debug-after-open-attempt.html and .png."
             )
 
         username_input.fill(username)
         password_input.fill(password)
 
-        submitted = False
+        _write_auth_debug(page, "before-submit")
 
+        submitted = False
         try:
             password_input.press("Enter")
             submitted = True
@@ -351,48 +482,42 @@ def login_and_get_fresh_token(username, password, owner):
                 page.get_by_role("button", name=re.compile(r"^log ?in$|^sign ?in$", re.I)),
                 page.locator('#global-modal-content button[type="submit"]'),
                 page.locator('#global-modal-content .black-button:not(.white-button)'),
-            ], timeout=2000)
+            ], timeout=3000)
 
             if not submit:
-                _write_login_debug(page, owner)
+                _write_auth_debug(page, "no-submit-button")
                 browser.close()
                 raise RuntimeError(f"Could not find login submit button for {owner}")
 
-            try:
-                submit.click(timeout=3000)
-            except Exception:
-                _write_login_debug(page, owner)
-                browser.close()
-                raise
+            submit.click(force=True, timeout=3000)
 
-        try:
-            page.wait_for_load_state("networkidle", timeout=20000)
-        except PlaywrightTimeoutError:
-            page.wait_for_timeout(5000)
+        for _ in range(30):
+            if captured["token"]:
+                break
+
+            token = _extract_client_token(page)
+            if token and JWT_RE.match(token):
+                captured["token"] = token
+                break
+
+            page.wait_for_timeout(500)
+
+        if not captured["token"]:
+            _write_auth_debug(page, "after-submit-no-token")
+            browser.close()
+            raise RuntimeError(
+                f"Could not extract a fresh JWT for {owner}. "
+                f"Check debug/{owner}-auth-debug-after-submit-no-token.json and matching html/png."
+            )
+
+        token = captured["token"].strip()
 
         page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
-        try:
-            page.wait_for_load_state("networkidle", timeout=15000)
-        except PlaywrightTimeoutError:
-            page.wait_for_timeout(4000)
-
-        if not captured["token"]:
-            captured["token"] = _extract_token_from_storage(page)
-
-        if not captured["token"]:
-            _write_login_debug(page, owner)
+        page.wait_for_timeout(2000)
 
         browser.close()
 
-    token = captured["token"].strip()
-    if not token or not JWT_RE.match(token):
-        raise RuntimeError(
-            f"Could not extract a fresh JWT for {owner}. "
-            f"Check debug/{owner}-login-debug artifacts."
-        )
-
     return token
-
 
 def safe_int(value, default=None):
     try:
