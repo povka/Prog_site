@@ -1032,37 +1032,20 @@ p{color:var(--ink-soft)}
 }
 
 @media (max-width: 560px){
-  .binder-controls-bottom{
-    grid-template-columns:1fr;
-  }
-
-  .binder-grid{
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-  }
-
-  .binder-controls-stats-row{
-    grid-template-columns:1fr;
-  }
-
-  .binder-controls-progression-row{
-    grid-template-columns:1fr;
-  }
-
+  .binder-controls-stats-row,
+  .binder-controls-progression-row,
   .binder-controls-scale-arrows-row{
-    grid-template-columns:1fr;
+    grid-template-columns: 1fr !important;
+  }
+
+  .binder-controls-stats-row > *,
+  .binder-controls-progression-row > *,
+  .binder-controls-scale-arrows-row > *{
+    width: 100%;
   }
 
   .binder-controls-scale-arrows-row .subtype-panel{
-    grid-column:auto;
-  }
-
-  #binders .deck-browser-card{
-    padding-left:24px;
-  }
-
-  #binders .deck-browser-card::before,
-  #binders .deck-browser-card::after{
-    display:none;
+    grid-column: auto !important;
   }
 }
 
