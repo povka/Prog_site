@@ -7823,30 +7823,5 @@
     "archetype": null,
     "image_id": 97017120,
     "image": "images/cards/97017120.jpg"
-  },
-  {
-    "owner": "asapaska",
-    "cardid": 83061014,
-    "name": "Numen erat Testudo",
-    "quantity": 1,
-    "set_code": "ORCS-EN038",
-    "set_name": "Order of Chaos",
-    "rarity": "Common",
-    "condition": "",
-    "edition": "",
-    "type": "Effect Monster",
-    "frameType": "effect",
-    "race": "Aqua",
-    "attribute": "WATER",
-    "level": 5,
-    "rank": null,
-    "atk": 1800,
-    "def": 0,
-    "linkval": null,
-    "linkmarkers": null,
-    "scale": null,
-    "archetype": null,
-    "image_id": 83061014,
-    "image": "images/cards/83061014.jpg"
   }
 ]
