@@ -974,19 +974,19 @@ p{color:var(--ink-soft)}
   }
 
   .binder-controls-stats-row{
-    grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-template-columns:1fr;
   }
 
   .binder-controls-progression-row{
-    grid-template-columns:repeat(2, minmax(0, 1fr));
+    grid-template-columns:1fr;
   }
 
-    .binder-controls-scale-arrows-row{
-    grid-template-columns:repeat(2, minmax(0, 1fr));
+  .binder-controls-scale-arrows-row{
+    grid-template-columns:1fr;
   }
 
   .binder-controls-scale-arrows-row .subtype-panel{
-    grid-column:1 / -1;
+    grid-column:auto;
   }
 
   .binder-controls-sort-box{
