@@ -252,17 +252,18 @@ def login_and_get_fresh_token(username, password, owner):
         password_input.fill(password)
 
         submit = _first_visible_locator([
+            page.get_by_role("button", name=re.compile(r"^log ?in$|^sign ?in$", re.I)),
             page.locator('#global-modal button[type="submit"]'),
-            page.locator('#global-modal button'),
-            page.get_by_role("button", name=re.compile(r"log ?in|sign ?in", re.I)),
-            page.locator('button[type="submit"]'),
-            page.locator('button:has-text("Login")'),
-            page.locator('button:has-text("Log In")'),
-            page.locator('button:has-text("Sign In")'),
+            page.locator('#global-modal .black-button:not(.white-button)'),
+            page.locator('#global-modal button[title*="log" i]'),
+            page.locator('#global-modal button[title*="sign" i]'),
         ], timeout=2000)
 
         if submit:
-            submit.click()
+            try:
+                submit.click(timeout=3000)
+            except Exception:
+                password_input.press("Enter")
         else:
             password_input.press("Enter")
 
