@@ -38,14 +38,14 @@ jobs:
           YGOPROG_USER_SHIRUBA: ${{ secrets.YGOPROG_USER_SHIRUBA }}
           YGOPROG_PASS_SHIRUBA: ${{ secrets.YGOPROG_PASS_SHIRUBA }}
         run: python scripts/build_binder_json.py
-        
-        - name: Upload login debug artifacts
-          if: failure()
-          uses: actions/upload-artifact@v4
-          with:
-            name: login-debug
-            path: debug/
-            if-no-files-found: ignore
+
+      - name: Upload login debug artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: login-debug
+          path: debug/
+          if-no-files-found: ignore
 
       - name: Commit generated files
         run: |
