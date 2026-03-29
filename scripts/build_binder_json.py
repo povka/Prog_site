@@ -59,31 +59,19 @@ def _first_visible_locator(candidates, timeout=2500):
 
 def _find_username_input(page):
     return _first_visible_locator([
-        page.locator('#global-modal input[autocomplete="username"]'),
-        page.locator('#global-modal input[name*="user" i]'),
-        page.locator('#global-modal input[name*="email" i]'),
-        page.locator('#global-modal input[type="email"]'),
-        page.locator('#global-modal input[type="text"]'),
-        page.get_by_label(re.compile(r"email|display name|username", re.I)),
-        page.get_by_placeholder(re.compile(r"email|display name|username", re.I)),
-        page.locator('input[autocomplete="username"]'),
-        page.locator('input[name*="user" i]'),
-        page.locator('input[name*="email" i]'),
-        page.locator('input[type="email"]'),
-        page.locator('input[type="text"]'),
+        page.locator('#global-modal-content input[autocomplete="username"]'),
+        page.locator('#global-modal-content input[type="email"]'),
+        page.locator('#global-modal-content input[type="text"]'),
+        page.locator('#global-modal-content input[name*="user" i]'),
+        page.locator('#global-modal-content input[name*="email" i]'),
     ])
 
 
 def _find_password_input(page):
     return _first_visible_locator([
-        page.locator('#global-modal input[autocomplete="current-password"]'),
-        page.locator('#global-modal input[name*="pass" i]'),
-        page.locator('#global-modal input[type="password"]'),
-        page.get_by_label(re.compile(r"password", re.I)),
-        page.get_by_placeholder(re.compile(r"password", re.I)),
-        page.locator('input[autocomplete="current-password"]'),
-        page.locator('input[name*="pass" i]'),
-        page.locator('input[type="password"]'),
+        page.locator('#global-modal-content input[autocomplete="current-password"]'),
+        page.locator('#global-modal-content input[type="password"]'),
+        page.locator('#global-modal-content input[name*="pass" i]'),
     ])
 
 
@@ -147,47 +135,27 @@ def _write_login_debug(page, owner):
 
 
 def _open_login_ui(page):
-    # Open the account dropdown / launcher in the header.
     launchers = [
-        page.locator("#account-nav-dropdown-box .topbar-link"),
-        page.locator("#account-nav-dropdown-box"),
+        page.locator('u.in-text-link[title="Open login modal"]'),
+        page.locator('p.content-box u.in-text-link'),
         page.get_by_text("Log In", exact=True),
+        page.locator("#account-nav-dropdown-box .topbar-link"),
     ]
 
-    opened = False
     for locator in launchers:
         try:
             locator.first.wait_for(state="visible", timeout=4000)
-            locator.first.click()
-            page.wait_for_timeout(1200)
-            opened = True
-            break
-        except Exception:
-            pass
+            locator.first.click(timeout=3000)
+            page.wait_for_timeout(2000)
 
-    if not opened:
-        return False
-
-    # Some sites inject the actual login form into a global modal only after this click.
-    # Try a second explicit click on the visible "Log In" text if needed.
-    for locator in [
-        page.get_by_text("Log In", exact=True),
-        page.locator('#global-modal button'),
-        page.locator('#global-modal input'),
-    ]:
-        try:
-            if locator.first.is_visible(timeout=1500):
+            # Login modal content should now be injected.
+            has_inputs = page.locator('#global-modal-content input').count() > 0
+            if has_inputs:
                 return True
         except Exception:
             pass
 
-    try:
-        page.get_by_text("Log In", exact=True).first.click(timeout=1500)
-        page.wait_for_timeout(1200)
-    except Exception:
-        pass
-
-    return True
+    return False
 
 
 def _locate_login_form(page):
@@ -198,7 +166,7 @@ def _locate_login_form(page):
     if username_input and password_input:
         return username_input, password_input
 
-    _open_login_ui(page)
+    opened = _open_login_ui(page)
     page.wait_for_timeout(2000)
 
     username_input = _find_username_input(page)
@@ -206,12 +174,14 @@ def _locate_login_form(page):
     if username_input and password_input:
         return username_input, password_input
 
-    # Fallback: go to home page and try again.
-    page.goto("https://www.ygoprog.com/", wait_until="domcontentloaded")
-    page.wait_for_timeout(2500)
-
-    _open_login_ui(page)
-    page.wait_for_timeout(2000)
+    if not opened:
+        try:
+            page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)
+            _open_login_ui(page)
+            page.wait_for_timeout(2000)
+        except Exception:
+            pass
 
     username_input = _find_username_input(page)
     password_input = _find_password_input(page)
@@ -224,6 +194,79 @@ def login_and_get_fresh_token(username, password, owner):
 
     captured = {"token": ""}
 
+    def _capture_token_from_response(response):
+        if captured["token"]:
+            return
+
+        try:
+            content_type = (response.headers or {}).get("content-type", "")
+        except Exception:
+            content_type = ""
+
+        if "application/json" not in content_type.lower():
+            return
+
+        try:
+            data = response.json()
+        except Exception:
+            return
+
+        if isinstance(data, dict):
+            for key in ("token", "accessToken", "jwt", "authToken"):
+                value = data.get(key)
+                if isinstance(value, str) and JWT_RE.match(value.strip()):
+                    captured["token"] = value.strip()
+                    return
+
+    def _open_login_ui(page):
+        launchers = [
+            page.locator('u.in-text-link[title="Open login modal"]'),
+            page.locator('p.content-box u.in-text-link'),
+            page.locator('#account-nav-dropdown-box .topbar-link'),
+            page.get_by_text("Log In", exact=True),
+        ]
+
+        for locator in launchers:
+            try:
+                locator.first.wait_for(state="visible", timeout=4000)
+                locator.first.click(timeout=3000)
+                page.wait_for_timeout(2000)
+
+                if page.locator('#global-modal-content input').count() > 0:
+                    return True
+            except Exception:
+                pass
+
+        return False
+
+    def _locate_inputs(page):
+        page.wait_for_timeout(2500)
+
+        username_input = _find_username_input(page)
+        password_input = _find_password_input(page)
+        if username_input and password_input:
+            return username_input, password_input
+
+        _open_login_ui(page)
+        page.wait_for_timeout(2000)
+
+        username_input = _find_username_input(page)
+        password_input = _find_password_input(page)
+        if username_input and password_input:
+            return username_input, password_input
+
+        try:
+            page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)
+            _open_login_ui(page)
+            page.wait_for_timeout(2000)
+        except Exception:
+            pass
+
+        username_input = _find_username_input(page)
+        password_input = _find_password_input(page)
+        return username_input, password_input
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
@@ -235,10 +278,11 @@ def login_and_get_fresh_token(username, password, owner):
                 captured["token"] = auth[7:].strip()
 
         page.on("request", capture_request)
+        page.on("response", _capture_token_from_response)
 
         page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
 
-        username_input, password_input = _locate_login_form(page)
+        username_input, password_input = _locate_inputs(page)
 
         if not username_input or not password_input:
             _write_login_debug(page, owner)
@@ -251,21 +295,26 @@ def login_and_get_fresh_token(username, password, owner):
         username_input.fill(username)
         password_input.fill(password)
 
-        submit = _first_visible_locator([
-            page.get_by_role("button", name=re.compile(r"^log ?in$|^sign ?in$", re.I)),
-            page.locator('#global-modal button[type="submit"]'),
-            page.locator('#global-modal .black-button:not(.white-button)'),
-            page.locator('#global-modal button[title*="log" i]'),
-            page.locator('#global-modal button[title*="sign" i]'),
-        ], timeout=2000)
+        try:
+            password_input.press("Enter")
+        except Exception:
+            submit = _first_visible_locator([
+                page.get_by_role("button", name=re.compile(r"^log ?in$|^sign ?in$", re.I)),
+                page.locator('#global-modal-content button[type="submit"]'),
+                page.locator('#global-modal-content .black-button:not(.white-button)'),
+            ], timeout=2000)
 
-        if submit:
+            if not submit:
+                _write_login_debug(page, owner)
+                browser.close()
+                raise RuntimeError(f"Could not find login submit button for {owner}")
+
             try:
                 submit.click(timeout=3000)
             except Exception:
-                password_input.press("Enter")
-        else:
-            password_input.press("Enter")
+                _write_login_debug(page, owner)
+                browser.close()
+                raise
 
         try:
             page.wait_for_load_state("networkidle", timeout=20000)
