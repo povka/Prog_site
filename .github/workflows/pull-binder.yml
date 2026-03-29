@@ -60,3 +60,11 @@ jobs:
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           git commit -m "Update binder JSON ${TIMESTAMP}"
           git push
+
+      - name: Notify Discord as Thicc Magician Girl
+        if: steps.generated_changes.outputs.changed == 'true'
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
+        run: |
+          python scripts/notify_binder_changes.py HEAD~1 HEAD
