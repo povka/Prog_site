@@ -57,6 +57,21 @@ def _first_visible_locator(candidates, timeout=2500):
     return None
 
 
+def write_text_if_changed(path: Path, content: str) -> bool:
+    existing = None
+
+    if path.exists():
+        try:
+            existing = path.read_text(encoding="utf-8")
+        except Exception:
+            existing = None
+
+    if existing == content:
+        return False
+
+    path.write_text(content, encoding="utf-8")
+    return True
+
 def _find_username_input(page):
     return _first_visible_locator([
         page.locator('#global-modal-content input[autocomplete="username"]'),
@@ -706,16 +721,20 @@ def main():
         all_binders[owner] = binder
 
         out_path = GENERATED_DIR / f"{owner}.json"
-        out_path.write_text(
-            json.dumps(binder, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8"
-        )
-        print(f"Wrote {owner}.json with {len(binder)} entries")
+        content = json.dumps(binder, indent=2, ensure_ascii=False) + "\n"
 
-    (GENERATED_DIR / "all-binders.json").write_text(
-        json.dumps(all_binders, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8"
-    )
+        if write_text_if_changed(out_path, content):
+            print(f"Updated {owner}.json with {len(binder)} entries")
+        else:
+            print(f"No change for {owner}.json")
+
+    all_binders_path = GENERATED_DIR / "all-binders.json"
+    all_binders_content = json.dumps(all_binders, indent=2, ensure_ascii=False) + "\n"
+
+    if write_text_if_changed(all_binders_path, all_binders_content):
+        print("Updated all-binders.json")
+    else:
+        print("No change for all-binders.json")
 
     print("Done.")
 
