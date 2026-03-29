@@ -18,5 +18,15 @@
       { "player": "asapaska", "image": "images/decks/week2-asa.jpg", "title": "Week 2 • asapaska Deck" },
       { "player": "ShirubaMaebure", "image": "images/decks/week2-shiruba.jpg", "title": "Week 2 • ShirubaMaebure Deck" }
     ]
+  },
+  "week3": {
+    "label": "Week 3 • Spell Ruler",
+    "searchTerms": ["week 3", "srl", "spell ruler"],
+    "decks": [
+      { "player": "Retroid99", "image": "images/decks/week3-retroid.jpg", "title": "Week 3 • Retroid99 Deck" },
+      { "player": "MHKaixer", "image": "images/decks/week3-kaixer.jpg", "title": "Week 3 • MHKaixer Deck" },
+      { "player": "asapaska", "image": "images/decks/week3-asa.jpg", "title": "Week 3 • asapaska Deck" },
+      { "player": "ShirubaMaebure", "image": "images/decks/week3-shiruba.jpg", "title": "Week 3 • ShirubaMaebure Deck" }
+    ]
   }
 }
