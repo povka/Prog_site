@@ -7776,18 +7776,18 @@
   },
   {
     "owner": "retroid99",
-    "cardid": 84013237,
-    "name": "Number 39: Utopia",
+    "cardid": 16195942,
+    "name": "Dark Rebellion Xyz Dragon",
     "quantity": 1,
-    "set_code": "YS11-EN041",
-    "set_name": "Starter Deck: Dawn of the Xyz",
-    "rarity": "Ultra Rare",
+    "set_code": "NECH-EN053",
+    "set_name": "The New Challengers",
+    "rarity": "Secret Rare",
     "condition": "",
     "edition": "",
     "type": "XYZ Monster",
     "frameType": "xyz",
-    "race": "Warrior",
-    "attribute": "LIGHT",
+    "race": "Dragon",
+    "attribute": "DARK",
     "level": 4,
     "rank": null,
     "atk": 2500,
@@ -7795,8 +7795,8 @@
     "linkval": null,
     "linkmarkers": null,
     "scale": null,
-    "archetype": "Utopia",
-    "image_id": 84013237,
-    "image": "images/cards/84013237.jpg"
+    "archetype": null,
+    "image_id": 16195942,
+    "image": "images/cards/16195942.jpg"
   }
 ]
