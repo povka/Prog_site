@@ -59,6 +59,11 @@ def _first_visible_locator(candidates, timeout=2500):
 
 def _find_username_input(page):
     return _first_visible_locator([
+        page.locator('#global-modal input[autocomplete="username"]'),
+        page.locator('#global-modal input[name*="user" i]'),
+        page.locator('#global-modal input[name*="email" i]'),
+        page.locator('#global-modal input[type="email"]'),
+        page.locator('#global-modal input[type="text"]'),
         page.get_by_label(re.compile(r"email|display name|username", re.I)),
         page.get_by_placeholder(re.compile(r"email|display name|username", re.I)),
         page.locator('input[autocomplete="username"]'),
@@ -71,6 +76,9 @@ def _find_username_input(page):
 
 def _find_password_input(page):
     return _first_visible_locator([
+        page.locator('#global-modal input[autocomplete="current-password"]'),
+        page.locator('#global-modal input[name*="pass" i]'),
+        page.locator('#global-modal input[type="password"]'),
         page.get_by_label(re.compile(r"password", re.I)),
         page.get_by_placeholder(re.compile(r"password", re.I)),
         page.locator('input[autocomplete="current-password"]'),
@@ -138,15 +146,59 @@ def _write_login_debug(page, owner):
         pass
 
 
+def _open_login_ui(page):
+    # Open the account dropdown / launcher in the header.
+    launchers = [
+        page.locator("#account-nav-dropdown-box .topbar-link"),
+        page.locator("#account-nav-dropdown-box"),
+        page.get_by_text("Log In", exact=True),
+    ]
+
+    opened = False
+    for locator in launchers:
+        try:
+            locator.first.wait_for(state="visible", timeout=4000)
+            locator.first.click()
+            page.wait_for_timeout(1200)
+            opened = True
+            break
+        except Exception:
+            pass
+
+    if not opened:
+        return False
+
+    # Some sites inject the actual login form into a global modal only after this click.
+    # Try a second explicit click on the visible "Log In" text if needed.
+    for locator in [
+        page.get_by_text("Log In", exact=True),
+        page.locator('#global-modal button'),
+        page.locator('#global-modal input'),
+    ]:
+        try:
+            if locator.first.is_visible(timeout=1500):
+                return True
+        except Exception:
+            pass
+
+    try:
+        page.get_by_text("Log In", exact=True).first.click(timeout=1500)
+        page.wait_for_timeout(1200)
+    except Exception:
+        pass
+
+    return True
+
+
 def _locate_login_form(page):
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(2500)
 
     username_input = _find_username_input(page)
     password_input = _find_password_input(page)
     if username_input and password_input:
         return username_input, password_input
 
-    _click_login_trigger_if_needed(page)
+    _open_login_ui(page)
     page.wait_for_timeout(2000)
 
     username_input = _find_username_input(page)
@@ -154,15 +206,11 @@ def _locate_login_form(page):
     if username_input and password_input:
         return username_input, password_input
 
-    page.goto("https://www.ygoprog.com", wait_until="domcontentloaded")
-    page.wait_for_timeout(3000)
+    # Fallback: go to home page and try again.
+    page.goto("https://www.ygoprog.com/", wait_until="domcontentloaded")
+    page.wait_for_timeout(2500)
 
-    username_input = _find_username_input(page)
-    password_input = _find_password_input(page)
-    if username_input and password_input:
-        return username_input, password_input
-
-    _click_login_trigger_if_needed(page)
+    _open_login_ui(page)
     page.wait_for_timeout(2000)
 
     username_input = _find_username_input(page)
@@ -204,6 +252,8 @@ def login_and_get_fresh_token(username, password, owner):
         password_input.fill(password)
 
         submit = _first_visible_locator([
+            page.locator('#global-modal button[type="submit"]'),
+            page.locator('#global-modal button'),
             page.get_by_role("button", name=re.compile(r"log ?in|sign ?in", re.I)),
             page.locator('button[type="submit"]'),
             page.locator('button:has-text("Login")'),
