@@ -26,11 +26,11 @@ PLAYER_SOURCES = {
         "user_env": "YGOPROG_USER_ASAPASKA",
         "pass_env": "YGOPROG_PASS_ASAPASKA",
     },
-    # "retroid99": {
-    #     "binder_id": "69b6cb6cc8cc2ae73f726070",
-    #     "user_env": "YGOPROG_USER_RETROID99",
-    #     "pass_env": "YGOPROG_PASS_RETROID99",
-    # },
+    "retroid99": {
+        "binder_id": "69b6cb6cc8cc2ae73f726070",
+        "user_env": "YGOPROG_USER_RETROID99",
+        "pass_env": "YGOPROG_PASS_RETROID99",
+    },
     # "mhkaixer": {
     #     "binder_id": "69bdb8134d2bfff886f45ef0",
     #     "user_env": "YGOPROG_USER_MHKAIXER",
