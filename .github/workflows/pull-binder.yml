@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,13 +49,20 @@ jobs:
           path: debug/
           if-no-files-found: ignore
 
-      - name: Commit generated files
+      - name: Check generated changes
+        id: generated_changes
         run: |
           if git diff --quiet -- dist/data/generated; then
-            echo "No changes to commit."
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes detected."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changes detected."
           fi
 
+      - name: Commit generated files
+        if: steps.generated_changes.outputs.changed == 'true'
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dist/data/generated
