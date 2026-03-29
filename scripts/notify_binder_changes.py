@@ -5,10 +5,10 @@ import json
 import os
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from collections import Counter
 from pathlib import PurePosixPath
-import urllib.request
-
 
 BASE_REF = sys.argv[1] if len(sys.argv) > 1 else "HEAD~1"
 HEAD_REF = sys.argv[2] if len(sys.argv) > 2 else "HEAD"
@@ -17,9 +17,12 @@ DISCORD_BOT_TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 DISCORD_CHANNEL_ID = os.environ["DISCORD_CHANNEL_ID"]
 
 API_BASE = "https://discord.com/api/v10"
-
-# Yellow-ish embed color
 EMBED_COLOR = 0xF1C40F
+
+# Discord hard limits are a bit higher, but we stay under them on purpose.
+FIELD_VALUE_SOFT_LIMIT = 1000
+EMBED_TEXT_SOFT_LIMIT = 5500
+MAX_FIELDS_PER_EMBED = 24
 
 
 def git(*args: str) -> str:
@@ -74,43 +77,120 @@ def owner_name_from_path(path: str) -> str:
     return PurePosixPath(path).stem
 
 
-def build_list(items: list[tuple[str, int]]) -> str:
+def safe_line(qty: int, name: str) -> str:
+    line = f"• {qty}x {name}"
+    if len(line) <= FIELD_VALUE_SOFT_LIMIT:
+        return line
+
+    # Extremely defensive; card names should not realistically hit this.
+    keep = max(1, FIELD_VALUE_SOFT_LIMIT - len(f"• {qty}x …"))
+    return f"• {qty}x {name[:keep]}…"
+
+
+def chunk_lines(items: list[tuple[str, int]]) -> list[str]:
     if not items:
-        return "None"
+        return []
 
-    return "\n".join(f"• {qty}x {name}" for name, qty in items)
+    chunks: list[str] = []
+    current = ""
+
+    for name, qty in items:
+        line = safe_line(qty, name)
+
+        if not current:
+            current = line
+            continue
+
+        candidate = current + "\n" + line
+        if len(candidate) <= FIELD_VALUE_SOFT_LIMIT:
+            current = candidate
+        else:
+            chunks.append(current)
+            current = line
+
+    if current:
+        chunks.append(current)
+
+    return chunks
 
 
-def make_embed(owner: str, removed: list[tuple[str, int]], added: list[tuple[str, int]]) -> dict:
-    fields = []
+def build_fields(removed: list[tuple[str, int]], added: list[tuple[str, int]]) -> list[dict]:
+    fields: list[dict] = []
 
-    if removed:
+    removed_chunks = chunk_lines(removed)
+    added_chunks = chunk_lines(added)
+
+    for i, chunk in enumerate(removed_chunks):
         fields.append({
-            "name": "Removed",
-            "value": build_list(removed),
-            "inline": False
+            "name": "Removed" if i == 0 else "Removed (cont.)",
+            "value": chunk,
+            "inline": False,
         })
 
-    if added:
+    for i, chunk in enumerate(added_chunks):
         fields.append({
-            "name": "Added",
-            "value": build_list(added),
-            "inline": False
+            "name": "Added" if i == 0 else "Added (cont.)",
+            "value": chunk,
+            "inline": False,
         })
 
-    return {
-        "title": owner,
-        "color": EMBED_COLOR,
-        "fields": fields
-    }
+    return fields
 
 
-def chunk_embeds(embeds: list[dict], max_per_message: int = 10) -> list[list[dict]]:
-    return [embeds[i:i + max_per_message] for i in range(0, len(embeds), max_per_message)]
+def embed_text_size(embed: dict) -> int:
+    total = 0
+    total += len(embed.get("title", ""))
+    total += len(embed.get("description", ""))
+    if "footer" in embed:
+        total += len(embed["footer"].get("text", ""))
+    if "author" in embed:
+        total += len(embed["author"].get("name", ""))
+    for field in embed.get("fields", []):
+        total += len(field.get("name", ""))
+        total += len(field.get("value", ""))
+    return total
 
 
-def post_embeds_to_discord(embeds: list[dict]) -> None:
-    payload = json.dumps({"embeds": embeds}).encode("utf-8")
+def make_embeds_for_owner(owner: str, removed: list[tuple[str, int]], added: list[tuple[str, int]]) -> list[dict]:
+    all_fields = build_fields(removed, added)
+    if not all_fields:
+        return []
+
+    embeds: list[dict] = []
+    current_fields: list[dict] = []
+
+    def new_embed(fields: list[dict], index: int) -> dict:
+        title = owner if index == 0 else f"{owner} (cont. {index + 1})"
+        return {
+            "title": title,
+            "color": EMBED_COLOR,
+            "fields": fields,
+        }
+
+    embed_index = 0
+
+    for field in all_fields:
+        candidate_fields = current_fields + [field]
+        candidate_embed = new_embed(candidate_fields, embed_index)
+
+        too_many_fields = len(candidate_fields) > MAX_FIELDS_PER_EMBED
+        too_much_text = embed_text_size(candidate_embed) > EMBED_TEXT_SOFT_LIMIT
+
+        if current_fields and (too_many_fields or too_much_text):
+            embeds.append(new_embed(current_fields, embed_index))
+            embed_index += 1
+            current_fields = [field]
+        else:
+            current_fields = candidate_fields
+
+    if current_fields:
+        embeds.append(new_embed(current_fields, embed_index))
+
+    return embeds
+
+
+def post_embed_to_discord(embed: dict) -> None:
+    payload = json.dumps({"embeds": [embed]}).encode("utf-8")
 
     req = urllib.request.Request(
         f"{API_BASE}/channels/{DISCORD_CHANNEL_ID}/messages",
@@ -118,13 +198,18 @@ def post_embeds_to_discord(embeds: list[dict]) -> None:
         headers={
             "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
             "Content-Type": "application/json",
-            "User-Agent": "thicc-magician-girl-binder-notifier/2.0",
+            "User-Agent": "thicc-magician-girl-binder-notifier/3.0",
         },
         method="POST",
     )
 
-    with urllib.request.urlopen(req) as resp:
-        print(f"Discord response: {resp.status}")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            print(f"Discord response: {resp.status}")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"Discord HTTP error {e.code}: {body}")
+        raise
 
 
 def main() -> int:
@@ -133,7 +218,7 @@ def main() -> int:
         print("No changed binder JSON files found.")
         return 0
 
-    embeds: list[dict] = []
+    embeds_to_send: list[dict] = []
 
     for path in files:
         old_rows = read_json_from_git(BASE_REF, path)
@@ -154,14 +239,14 @@ def main() -> int:
 
         if removed or added:
             owner = owner_name_from_path(path)
-            embeds.append(make_embed(owner, removed, added))
+            embeds_to_send.extend(make_embeds_for_owner(owner, removed, added))
 
-    if not embeds:
+    if not embeds_to_send:
         print("No card-level binder deltas found.")
         return 0
 
-    for embed_batch in chunk_embeds(embeds):
-        post_embeds_to_discord(embed_batch)
+    for embed in embeds_to_send:
+        post_embed_to_discord(embed)
 
     return 0
 
