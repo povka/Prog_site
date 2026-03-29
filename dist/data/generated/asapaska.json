@@ -7823,5 +7823,30 @@
     "archetype": null,
     "image_id": 97017120,
     "image": "images/cards/97017120.jpg"
+  },
+  {
+    "owner": "asapaska",
+    "cardid": 92373006,
+    "name": "Test Tiger",
+    "quantity": 1,
+    "set_code": "GLAS-EN082",
+    "set_name": "Gladiator's Assault",
+    "rarity": "Ultra Rare",
+    "condition": "",
+    "edition": "",
+    "type": "Effect Monster",
+    "frameType": "effect",
+    "race": "Beast",
+    "attribute": "EARTH",
+    "level": 3,
+    "rank": null,
+    "atk": 600,
+    "def": 300,
+    "linkval": null,
+    "linkmarkers": null,
+    "scale": null,
+    "archetype": "Gladiator Beast",
+    "image_id": 92373006,
+    "image": "images/cards/92373006.jpg"
   }
 ]
