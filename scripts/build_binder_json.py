@@ -219,21 +219,55 @@ def login_and_get_fresh_token(username, password, owner):
                     return
 
     def _open_login_ui(page):
-        launchers = [
-            page.locator('u.in-text-link[title="Open login modal"]'),
-            page.locator('p.content-box u.in-text-link'),
-            page.locator('#account-nav-dropdown-box .topbar-link'),
-            page.get_by_text("Log In", exact=True),
+        js_clicks = [
+            """
+            () => {
+                const el = document.querySelector('u.in-text-link[title="Open login modal"]');
+                if (!el) return false;
+                el.click();
+                return true;
+            }
+            """,
+            """
+            () => {
+                const el = document.querySelector('#account-nav-dropdown-box .topbar-link');
+                if (!el) return false;
+                el.click();
+                return true;
+            }
+            """,
+            """
+            () => {
+                const els = [...document.querySelectorAll('*')];
+                const el = els.find(x => (x.textContent || '').trim() === 'Log In');
+                if (!el) return false;
+                el.click();
+                return true;
+            }
+            """
         ]
 
-        for locator in launchers:
+        for script in js_clicks:
             try:
-                locator.first.wait_for(state="visible", timeout=4000)
-                locator.first.click(timeout=3000)
-                page.wait_for_timeout(2000)
+                clicked = page.evaluate(script)
+                if clicked:
+                    page.wait_for_timeout(2500)
+                    try:
+                        page.wait_for_function(
+                            """
+                            () => {
+                                const modal = document.querySelector('#global-modal-content');
+                                if (!modal) return false;
+                                return modal.querySelector('input') !== null || modal.textContent.trim().length > 0;
+                            }
+                            """,
+                            timeout=5000,
+                        )
+                    except Exception:
+                        pass
 
-                if page.locator('#global-modal-content input').count() > 0:
-                    return True
+                    if page.locator('#global-modal-content input').count() > 0:
+                        return True
             except Exception:
                 pass
 
@@ -255,21 +289,29 @@ def login_and_get_fresh_token(username, password, owner):
         if username_input and password_input:
             return username_input, password_input
 
-        try:
-            page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
-            page.wait_for_timeout(2000)
-            _open_login_ui(page)
-            page.wait_for_timeout(2000)
-        except Exception:
-            pass
-
-        username_input = _find_username_input(page)
-        password_input = _find_password_input(page)
         return username_input, password_input
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
+
+        # Block ad / consent / funding scripts that are clearly present in the debug HTML.
+        context.route(
+            "**/*",
+            lambda route: route.abort()
+            if any(
+                blocked in route.request.url
+                for blocked in [
+                    "googlesyndication.com",
+                    "doubleclick.net",
+                    "googleadservices.com",
+                    "fundingchoicesmessages.google.com",
+                    "adsbygoogle.js",
+                ]
+            )
+            else route.continue_()
+        )
+
         page = context.new_page()
 
         def capture_request(request):
@@ -281,6 +323,7 @@ def login_and_get_fresh_token(username, password, owner):
         page.on("response", _capture_token_from_response)
 
         page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
+        page.wait_for_timeout(3000)
 
         username_input, password_input = _locate_inputs(page)
 
@@ -295,9 +338,15 @@ def login_and_get_fresh_token(username, password, owner):
         username_input.fill(username)
         password_input.fill(password)
 
+        submitted = False
+
         try:
             password_input.press("Enter")
+            submitted = True
         except Exception:
+            pass
+
+        if not submitted:
             submit = _first_visible_locator([
                 page.get_by_role("button", name=re.compile(r"^log ?in$|^sign ?in$", re.I)),
                 page.locator('#global-modal-content button[type="submit"]'),
