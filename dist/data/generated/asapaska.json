@@ -7823,5 +7823,30 @@
     "archetype": null,
     "image_id": 97017120,
     "image": "images/cards/97017120.jpg"
+  },
+  {
+    "owner": "asapaska",
+    "cardid": 84013237,
+    "name": "Number 39: Utopia",
+    "quantity": 1,
+    "set_code": "YS11-EN041",
+    "set_name": "Starter Deck: Dawn of the Xyz",
+    "rarity": "Ultra Rare",
+    "condition": "",
+    "edition": "",
+    "type": "XYZ Monster",
+    "frameType": "xyz",
+    "race": "Warrior",
+    "attribute": "LIGHT",
+    "level": 4,
+    "rank": null,
+    "atk": 2500,
+    "def": 2000,
+    "linkval": null,
+    "linkmarkers": null,
+    "scale": null,
+    "archetype": "Utopia",
+    "image_id": 84013237,
+    "image": "images/cards/84013237.jpg"
   }
 ]
