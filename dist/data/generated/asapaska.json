@@ -7823,5 +7823,30 @@
     "archetype": null,
     "image_id": 97017120,
     "image": "images/cards/97017120.jpg"
+  },
+  {
+    "owner": "asapaska",
+    "cardid": 62076252,
+    "name": "Test Bear",
+    "quantity": 1,
+    "set_code": "SUDA-EN018",
+    "set_name": "Supreme Darkness",
+    "rarity": "Ultra Rare",
+    "condition": "",
+    "edition": "",
+    "type": "Effect Monster",
+    "frameType": "effect",
+    "race": "Beast",
+    "attribute": "EARTH",
+    "level": 4,
+    "rank": null,
+    "atk": 900,
+    "def": 600,
+    "linkval": null,
+    "linkmarkers": null,
+    "scale": null,
+    "archetype": "Test",
+    "image_id": 62076252,
+    "image": "images/cards/62076252.jpg"
   }
 ]
