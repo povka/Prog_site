@@ -7773,30 +7773,5 @@
     "archetype": null,
     "image_id": 97017120,
     "image": "images/cards/97017120.jpg"
-  },
-  {
-    "owner": "retroid99",
-    "cardid": 16195942,
-    "name": "Dark Rebellion Xyz Dragon",
-    "quantity": 1,
-    "set_code": "NECH-EN053",
-    "set_name": "The New Challengers",
-    "rarity": "Secret Rare",
-    "condition": "",
-    "edition": "",
-    "type": "XYZ Monster",
-    "frameType": "xyz",
-    "race": "Dragon",
-    "attribute": "DARK",
-    "level": 4,
-    "rank": null,
-    "atk": 2500,
-    "def": 2000,
-    "linkval": null,
-    "linkmarkers": null,
-    "scale": null,
-    "archetype": null,
-    "image_id": 16195942,
-    "image": "images/cards/16195942.jpg"
   }
 ]
