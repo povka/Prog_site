@@ -1,12 +1,12 @@
-import csv
 import json
 import os
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
+import re
+from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-RAW_DIR = ROOT / "data" / "raw"
 GENERATED_DIR = ROOT / "dist" / "data" / "generated"
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -14,34 +14,141 @@ YGOPRODECK_API_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php"
 YGOPROG_BINDER_API = "https://api.ygoprog.com/api/binder/{binder_id}"
 USER_AGENT = "Mozilla/5.0"
 
-# You can mix CSV and API sources here.
-# type="csv"  -> value is a filename inside data/raw
-# type="api"  -> value is a YGO Prog binder ID
+CARD_INDEX_PATH = GENERATED_DIR / "card-index.json"
+
 PLAYER_SOURCES = {
     "asapaska": {
-        "type": "api",
         "binder_id": "69b6c1c3c8cc2ae73f725812",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWIxNmI0M2RkZWVkZjk0ZGVkMmU5YTEiLCJ1c2VybmFtZSI6ImFzYXBhc2thIiwiaWF0IjoxNzc0Njg3MTcwLCJleHAiOjE3NzQ3NzM1NzB9.8HFUvPG9QE7DHy7he2aWfInS3rigv8E1-7ZK7xxPdlA",
+        "user_env": "YGOPROG_USER_ASAPASKA",
+        "pass_env": "YGOPROG_PASS_ASAPASKA",
     },
-    "retroid99": {
-        "type": "api",
-        "binder_id": "69b6cb6cc8cc2ae73f726070",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWI2YzliOTNkNjhkYjdlNjg4YWZkMTIiLCJ1c2VybmFtZSI6InJldHJvaWQ5OSIsImlhdCI6MTc3NDczOTIzOSwiZXhwIjoxNzc0ODI1NjM5fQ.NYW5rluufLXIhRi32D1WlDNxPV6KGRTELSXht2DDLEI",
-    },
+    # "retroid99": {
+    #     "binder_id": "69b6cb6cc8cc2ae73f726070",
+    #     "user_env": "YGOPROG_USER_RETROID99",
+    #     "pass_env": "YGOPROG_PASS_RETROID99",
+    # },
     # "mhkaixer": {
-        # "type": "api",
-        # "binder_id": "PASTE_MHKAIXER_BINDER_ID_HERE",
-        # "token": "PASTE_FRESH_MHKAIXER_TOKEN_HERE",
+    #     "binder_id": "69bdb8134d2bfff886f45ef0",
+    #     "user_env": "YGOPROG_USER_MHKAIXER",
+    #     "pass_env": "YGOPROG_PASS_MHKAIXER",
     # },
     # "shiruba": {
-        # "type": "api",
-        # "binder_id": "PASTE_SHIRUBA_BINDER_ID_HERE",
-        # "token": "PASTE_FRESH_SHIRUBA_TOKEN_HERE",
+    #     "binder_id": "69b71f7fc8cc2ae73f72e5c1",
+    #     "user_env": "YGOPROG_USER_SHIRUBA",
+    #     "pass_env": "YGOPROG_PASS_SHIRUBA",
     # },
 }
 
-CARD_INDEX_PATH = GENERATED_DIR / "card-index.json"
+JWT_RE = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
 
+
+def _first_working_locator(page, selectors, timeout=4000):
+    for selector in selectors:
+        try:
+            loc = page.locator(selector).first
+            loc.wait_for(state="visible", timeout=timeout)
+            return loc
+        except Exception:
+            pass
+    return None
+
+
+def _extract_token_from_storage(page):
+    token = page.evaluate(
+        """
+        () => {
+          const jwt = /^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/;
+          const stores = [window.localStorage, window.sessionStorage];
+
+          for (const store of stores) {
+            for (let i = 0; i < store.length; i++) {
+              const key = store.key(i) || "";
+              const value = store.getItem(key) || "";
+
+              if (jwt.test(value)) return value;
+              if (/token|auth|jwt/i.test(key) && value) return value;
+            }
+          }
+
+          return "";
+        }
+        """
+    )
+    return token.strip()
+
+
+def login_and_get_fresh_token(username, password):
+    if not username or not password:
+        raise RuntimeError("Missing YGO Prog username/password.")
+
+    captured = {"token": ""}
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+
+        def capture_request(request):
+            auth = request.headers.get("authorization", "")
+            if auth.lower().startswith("bearer "):
+                captured["token"] = auth[7:].strip()
+
+        page.on("request", capture_request)
+
+        page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
+
+        username_input = _first_working_locator(page, [
+            'input[name="username"]',
+            'input[autocomplete="username"]',
+            'input[type="email"]',
+            'input[type="text"]',
+        ])
+
+        password_input = _first_working_locator(page, [
+            'input[name="password"]',
+            'input[autocomplete="current-password"]',
+            'input[type="password"]',
+        ])
+
+        if not username_input or not password_input:
+            browser.close()
+            raise RuntimeError("Could not find login fields. Update the selectors.")
+
+        username_input.fill(username)
+        password_input.fill(password)
+
+        clicked = False
+        for selector in [
+            'button:has-text("Login")',
+            'button:has-text("Log In")',
+            'button:has-text("Sign In")',
+            'button[type="submit"]',
+        ]:
+            try:
+                page.locator(selector).first.click(timeout=2000)
+                clicked = True
+                break
+            except Exception:
+                pass
+
+        if not clicked:
+            password_input.press("Enter")
+
+        page.wait_for_load_state("networkidle", timeout=20000)
+
+        # Revisit BinderManagement so the app makes authenticated API calls.
+        page.goto("https://www.ygoprog.com/BinderManagement", wait_until="networkidle")
+
+        if not captured["token"]:
+            captured["token"] = _extract_token_from_storage(page)
+
+        browser.close()
+
+    token = captured["token"].strip()
+    if not token or not JWT_RE.match(token):
+        raise RuntimeError("Could not extract a fresh JWT. Update login selectors or token extraction.")
+
+    return token
 
 def safe_int(value, default=None):
     try:
@@ -59,12 +166,12 @@ def load_full_card_database():
 
 def build_card_index(cards):
     index = {}
+
     for card in cards:
         card_id = card.get("id")
         if not isinstance(card_id, int):
             continue
 
-        card_sets = card.get("card_sets", []) or []
         card_images = card.get("card_images", []) or []
         first_image = card_images[0] if card_images else {}
 
@@ -84,10 +191,10 @@ def build_card_index(cards):
             "linkval": card.get("linkval"),
             "linkmarkers": card.get("linkmarkers"),
             "scale": card.get("scale"),
-            "sets": card_sets,
             "image_id": first_image.get("id", card_id),
             "image": f"images/cards/{first_image.get('id', card_id)}.jpg",
         }
+
     return index
 
 
@@ -101,39 +208,63 @@ def load_or_build_card_index():
     card_index = build_card_index(cards)
 
     CARD_INDEX_PATH.write_text(
-        json.dumps(card_index, indent=2, ensure_ascii=False),
+        json.dumps(card_index, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8"
     )
+
     return card_index
 
 
-def build_output_row(
-    owner,
-    cardid,
-    fallback_name,
-    quantity,
-    set_code,
-    set_name,
-    rarity,
-    condition,
-    edition,
-    card_index
-):
-    cardid_str = str(cardid).strip() if cardid is not None else ""
+def fetch_remote_binder_cards(binder_id, token):
+    url = YGOPROG_BINDER_API.format(binder_id=binder_id)
+
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    req = Request(url, headers=headers)
+
+    try:
+        with urlopen(req, timeout=180) as resp:
+            payload = json.load(resp)
+    except HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {e.code} while fetching binder {binder_id}: {body}") from e
+    except URLError as e:
+        raise RuntimeError(f"Network error while fetching binder {binder_id}: {e}") from e
+
+    cards = payload.get("cards")
+    if not isinstance(cards, list):
+        raise RuntimeError(f"Binder {binder_id} response did not contain a cards list.")
+
+    return cards
+
+
+def build_output_row(owner, api_row, card_index):
+    cardid_raw = api_row.get("cardId", "")
+    cardid_str = str(cardid_raw).strip()
     meta = card_index.get(cardid_str)
+
+    fallback_name = (api_row.get("name") or "").strip()
+    quantity = safe_int(api_row.get("count", 1), 1)
+    set_code = (api_row.get("code") or "").strip()
+    set_name = (api_row.get("set") or "").strip()
+    rarity = (api_row.get("rarity") or "").strip()
 
     if not meta:
         numeric_cardid = safe_int(cardid_str, None)
         return {
             "owner": owner,
             "cardid": numeric_cardid,
-            "name": (fallback_name or "").strip(),
-            "quantity": safe_int(quantity, 1),
-            "set_code": (set_code or "").strip(),
-            "set_name": (set_name or "").strip(),
-            "rarity": (rarity or "").strip(),
-            "condition": (condition or "").strip(),
-            "edition": (edition or "").strip(),
+            "name": fallback_name,
+            "quantity": quantity,
+            "set_code": set_code,
+            "set_name": set_name,
+            "rarity": rarity,
+            "condition": "",
+            "edition": "",
             "type": None,
             "frameType": None,
             "race": None,
@@ -153,13 +284,13 @@ def build_output_row(
     return {
         "owner": owner,
         "cardid": meta["cardid"],
-        "name": (fallback_name or "").strip() or meta["name"],
-        "quantity": safe_int(quantity, 1),
-        "set_code": (set_code or "").strip(),
-        "set_name": (set_name or "").strip(),
-        "rarity": (rarity or "").strip(),
-        "condition": (condition or "").strip(),
-        "edition": (edition or "").strip(),
+        "name": fallback_name or meta["name"],
+        "quantity": quantity,
+        "set_code": set_code,
+        "set_name": set_name,
+        "rarity": rarity,
+        "condition": "",
+        "edition": "",
         "type": meta["type"],
         "frameType": meta["frameType"],
         "race": meta["race"],
@@ -177,78 +308,9 @@ def build_output_row(
     }
 
 
-def normalize_csv_row(owner, row, card_index):
-    return build_output_row(
-        owner=owner,
-        cardid=row.get("cardid", ""),
-        fallback_name=row.get("cardname", ""),
-        quantity=row.get("cardq", "1"),
-        set_code=row.get("cardcode", ""),
-        set_name=row.get("cardset", ""),
-        rarity=row.get("cardrarity", ""),
-        condition=row.get("cardcondition", ""),
-        edition=row.get("card_edition", ""),
-        card_index=card_index,
-    )
-
-
-def normalize_api_row(owner, row, card_index):
-    # YGO Prog binder API does not currently provide condition/edition.
-    # Leave them blank unless you want to force defaults.
-    return build_output_row(
-        owner=owner,
-        cardid=row.get("cardId", ""),
-        fallback_name=row.get("name", ""),
-        quantity=row.get("count", 1),
-        set_code=row.get("code", ""),
-        set_name=row.get("set", ""),
-        rarity=row.get("rarity", ""),
-        condition="",
-        edition="",
-        card_index=card_index,
-    )
-
-
-def fetch_remote_binder_cards(binder_id, token):
-    url = YGOPROG_BINDER_API.format(binder_id=binder_id)
-    headers = {
-        "User-Agent": USER_AGENT,
-        "Accept": "application/json",
-        "Authorization": f"Bearer {token}",
-    }
-    req = Request(url, headers=headers)
-
-    try:
-        with urlopen(req, timeout=180) as resp:
-            payload = json.load(resp)
-    except HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {e.code} while fetching binder {binder_id}: {body}") from e
-    except URLError as e:
-        raise RuntimeError(f"Network error while fetching binder {binder_id}: {e}") from e
-
-    cards = payload.get("cards")
-    if not isinstance(cards, list):
-        raise RuntimeError(f"Binder {binder_id} response did not contain a cards list.")
-
-    return cards
-
-
-def build_player_binder_from_csv(owner, filename, card_index):
-    path = RAW_DIR / filename
-    rows = []
-
-    with path.open("r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            rows.append(normalize_csv_row(owner, row, card_index))
-
-    return rows
-
-
-def build_player_binder_from_api(owner, binder_id, card_index, token):
+def build_player_binder_from_api(owner, binder_id, token, card_index):
     raw_cards = fetch_remote_binder_cards(binder_id, token)
-    return [normalize_api_row(owner, row, card_index) for row in raw_cards]
+    return [build_output_row(owner, row, card_index) for row in raw_cards]
 
 
 def main():
@@ -256,21 +318,26 @@ def main():
     all_binders = {}
 
     for owner, source in PLAYER_SOURCES.items():
-        source_type = source["type"]
+        username = os.environ.get(source["user_env"], "").strip()
+        password = os.environ.get(source["pass_env"], "").strip()
 
-        if source_type != "api":
-            raise RuntimeError(f"Only api sources are enabled now. Bad source for {owner}: {source_type}")
+        if not username or not password:
+            raise RuntimeError(f"Missing credentials for {owner}")
 
-        binder_id = source["binder_id"]
-        token = source["token"].strip()
+        print(f"Logging in for {owner}...")
+        token = login_and_get_fresh_token(username, password)
 
-        if not token:
-            raise RuntimeError(f"Missing token for {owner}")
+        binder = build_player_binder_from_api(
+            owner=owner,
+            binder_id=source["binder_id"],
+            token=token,
+            card_index=card_index,
+        )
 
-        binder = build_player_binder_from_api(owner, binder_id, card_index, token)
         all_binders[owner] = binder
 
-        (GENERATED_DIR / f"{owner}.json").write_text(
+        out_path = GENERATED_DIR / f"{owner}.json"
+        out_path.write_text(
             json.dumps(binder, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8"
         )

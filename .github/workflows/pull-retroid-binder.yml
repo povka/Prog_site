@@ -1,4 +1,4 @@
-name: Pull Retroid binder
+name: Build binder JSON
 
 on:
   workflow_dispatch:
@@ -9,30 +9,45 @@ permissions:
   contents: write
 
 jobs:
-  pull:
+  build-binders:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          node-version: "22"
+          python-version: "3.12"
 
-      - name: Pull binder JSON
-        run: node scripts/pull-retroid.mjs
-        env:
-          YGOPROG_TOKEN: ${{ secrets.YGOPROG_TOKEN }}
-
-      - name: Commit changes
+      - name: Install dependencies
         run: |
-          if git diff --quiet -- dist/data/generated/retroid99.json; then
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install chromium
+
+      - name: Build binder JSON
+        env:
+          YGOPROG_USER_ASAPASKA: ${{ secrets.YGOPROG_USER_ASAPASKA }}
+          YGOPROG_PASS_ASAPASKA: ${{ secrets.YGOPROG_PASS_ASAPASKA }}
+          YGOPROG_USER_RETROID99: ${{ secrets.YGOPROG_USER_RETROID99 }}
+          YGOPROG_PASS_RETROID99: ${{ secrets.YGOPROG_PASS_RETROID99 }}
+          YGOPROG_USER_MHKAIXER: ${{ secrets.YGOPROG_USER_MHKAIXER }}
+          YGOPROG_PASS_MHKAIXER: ${{ secrets.YGOPROG_PASS_MHKAIXER }}
+          YGOPROG_USER_SHIRUBA: ${{ secrets.YGOPROG_USER_SHIRUBA }}
+          YGOPROG_PASS_SHIRUBA: ${{ secrets.YGOPROG_PASS_SHIRUBA }}
+        run: python scripts/build_binder_json.py
+
+      - name: Commit generated files
+        run: |
+          if git diff --quiet -- dist/data/generated; then
             echo "No changes to commit."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/data/generated/retroid99.json
-          git commit -m "Update Retroid binder"
+          git add dist/data/generated
+          git commit -m "Update binder JSON"
           git push
