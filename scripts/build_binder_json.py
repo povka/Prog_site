@@ -31,11 +31,11 @@ PLAYER_SOURCES = {
         "user_env": "YGOPROG_USER_RETROID99",
         "pass_env": "YGOPROG_PASS_RETROID99",
     },
-    # "mhkaixer": {
-    #     "binder_id": "69bdb8134d2bfff886f45ef0",
-    #     "user_env": "YGOPROG_USER_MHKAIXER",
-    #     "pass_env": "YGOPROG_PASS_MHKAIXER",
-    # },
+    "mhkaixer": {
+        "binder_id": "69bdb8134d2bfff886f45ef0",
+        "user_env": "YGOPROG_USER_MHKAIXER",
+        "pass_env": "YGOPROG_PASS_MHKAIXER",
+    },
     # "shiruba": {
     #     "binder_id": "69b71f7fc8cc2ae73f72e5c1",
     #     "user_env": "YGOPROG_USER_SHIRUBA",
