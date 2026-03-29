@@ -1,14 +1,18 @@
 import json
 import os
+import re
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError, URLError
-import re
-from playwright.sync_api import sync_playwright
+
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 ROOT = Path(__file__).resolve().parent.parent
 GENERATED_DIR = ROOT / "dist" / "data" / "generated"
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+
+DEBUG_DIR = ROOT / "debug"
+DEBUG_DIR.mkdir(parents=True, exist_ok=True)
 
 YGOPRODECK_API_URL = "https://db.ygoprodeck.com/api/v7/cardinfo.php"
 YGOPROG_BINDER_API = "https://api.ygoprog.com/api/binder/{binder_id}"
@@ -42,15 +46,57 @@ PLAYER_SOURCES = {
 JWT_RE = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
 
 
-def _first_working_locator(page, selectors, timeout=4000):
-    for selector in selectors:
+def _first_visible_locator(candidates, timeout=2500):
+    for locator in candidates:
         try:
-            loc = page.locator(selector).first
+            loc = locator.first
             loc.wait_for(state="visible", timeout=timeout)
             return loc
         except Exception:
             pass
     return None
+
+
+def _find_username_input(page):
+    return _first_visible_locator([
+        page.get_by_label(re.compile(r"email|display name|username", re.I)),
+        page.get_by_placeholder(re.compile(r"email|display name|username", re.I)),
+        page.locator('input[autocomplete="username"]'),
+        page.locator('input[name*="user" i]'),
+        page.locator('input[name*="email" i]'),
+        page.locator('input[type="email"]'),
+        page.locator('input[type="text"]'),
+    ])
+
+
+def _find_password_input(page):
+    return _first_visible_locator([
+        page.get_by_label(re.compile(r"password", re.I)),
+        page.get_by_placeholder(re.compile(r"password", re.I)),
+        page.locator('input[autocomplete="current-password"]'),
+        page.locator('input[name*="pass" i]'),
+        page.locator('input[type="password"]'),
+    ])
+
+
+def _click_login_trigger_if_needed(page):
+    trigger = _first_visible_locator([
+        page.get_by_role("button", name=re.compile(r"log ?in|sign ?in", re.I)),
+        page.get_by_role("link", name=re.compile(r"log ?in|sign ?in", re.I)),
+        page.locator('button:has-text("Login")'),
+        page.locator('button:has-text("Log In")'),
+        page.locator('button:has-text("Sign In")'),
+        page.locator('a:has-text("Login")'),
+        page.locator('a:has-text("Log In")'),
+        page.locator('a:has-text("Sign In")'),
+    ], timeout=1500)
+
+    if trigger:
+        trigger.click()
+        page.wait_for_timeout(1500)
+        return True
+
+    return False
 
 
 def _extract_token_from_storage(page):
@@ -77,9 +123,56 @@ def _extract_token_from_storage(page):
     return token.strip()
 
 
-def login_and_get_fresh_token(username, password):
+def _write_login_debug(page, owner):
+    png_path = DEBUG_DIR / f"{owner}-login-debug.png"
+    html_path = DEBUG_DIR / f"{owner}-login-debug.html"
+
+    try:
+        page.screenshot(path=str(png_path), full_page=True)
+    except Exception:
+        pass
+
+    try:
+        html_path.write_text(page.content(), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _locate_login_form(page):
+    page.wait_for_timeout(3000)
+
+    username_input = _find_username_input(page)
+    password_input = _find_password_input(page)
+    if username_input and password_input:
+        return username_input, password_input
+
+    _click_login_trigger_if_needed(page)
+    page.wait_for_timeout(2000)
+
+    username_input = _find_username_input(page)
+    password_input = _find_password_input(page)
+    if username_input and password_input:
+        return username_input, password_input
+
+    page.goto("https://www.ygoprog.com", wait_until="domcontentloaded")
+    page.wait_for_timeout(3000)
+
+    username_input = _find_username_input(page)
+    password_input = _find_password_input(page)
+    if username_input and password_input:
+        return username_input, password_input
+
+    _click_login_trigger_if_needed(page)
+    page.wait_for_timeout(2000)
+
+    username_input = _find_username_input(page)
+    password_input = _find_password_input(page)
+    return username_input, password_input
+
+
+def login_and_get_fresh_token(username, password, owner):
     if not username or not password:
-        raise RuntimeError("Missing YGO Prog username/password.")
+        raise RuntimeError(f"Missing YGO Prog username/password for {owner}")
 
     captured = {"token": ""}
 
@@ -97,58 +190,60 @@ def login_and_get_fresh_token(username, password):
 
         page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
 
-        username_input = _first_working_locator(page, [
-            'input[name="username"]',
-            'input[autocomplete="username"]',
-            'input[type="email"]',
-            'input[type="text"]',
-        ])
-
-        password_input = _first_working_locator(page, [
-            'input[name="password"]',
-            'input[autocomplete="current-password"]',
-            'input[type="password"]',
-        ])
+        username_input, password_input = _locate_login_form(page)
 
         if not username_input or not password_input:
+            _write_login_debug(page, owner)
             browser.close()
-            raise RuntimeError("Could not find login fields. Update the selectors.")
+            raise RuntimeError(
+                f"Could not find login fields for {owner}. "
+                f"Check debug/{owner}-login-debug.png and debug/{owner}-login-debug.html."
+            )
 
         username_input.fill(username)
         password_input.fill(password)
 
-        clicked = False
-        for selector in [
-            'button:has-text("Login")',
-            'button:has-text("Log In")',
-            'button:has-text("Sign In")',
-            'button[type="submit"]',
-        ]:
-            try:
-                page.locator(selector).first.click(timeout=2000)
-                clicked = True
-                break
-            except Exception:
-                pass
+        submit = _first_visible_locator([
+            page.get_by_role("button", name=re.compile(r"log ?in|sign ?in", re.I)),
+            page.locator('button[type="submit"]'),
+            page.locator('button:has-text("Login")'),
+            page.locator('button:has-text("Log In")'),
+            page.locator('button:has-text("Sign In")'),
+        ], timeout=2000)
 
-        if not clicked:
+        if submit:
+            submit.click()
+        else:
             password_input.press("Enter")
 
-        page.wait_for_load_state("networkidle", timeout=20000)
+        try:
+            page.wait_for_load_state("networkidle", timeout=20000)
+        except PlaywrightTimeoutError:
+            page.wait_for_timeout(5000)
 
-        # Revisit BinderManagement so the app makes authenticated API calls.
-        page.goto("https://www.ygoprog.com/BinderManagement", wait_until="networkidle")
+        page.goto("https://www.ygoprog.com/BinderManagement", wait_until="domcontentloaded")
+        try:
+            page.wait_for_load_state("networkidle", timeout=15000)
+        except PlaywrightTimeoutError:
+            page.wait_for_timeout(4000)
 
         if not captured["token"]:
             captured["token"] = _extract_token_from_storage(page)
+
+        if not captured["token"]:
+            _write_login_debug(page, owner)
 
         browser.close()
 
     token = captured["token"].strip()
     if not token or not JWT_RE.match(token):
-        raise RuntimeError("Could not extract a fresh JWT. Update login selectors or token extraction.")
+        raise RuntimeError(
+            f"Could not extract a fresh JWT for {owner}. "
+            f"Check debug/{owner}-login-debug artifacts."
+        )
 
     return token
+
 
 def safe_int(value, default=None):
     try:
@@ -325,7 +420,7 @@ def main():
             raise RuntimeError(f"Missing credentials for {owner}")
 
         print(f"Logging in for {owner}...")
-        token = login_and_get_fresh_token(username, password)
+        token = login_and_get_fresh_token(username, password, owner)
 
         binder = build_player_binder_from_api(
             owner=owner,
