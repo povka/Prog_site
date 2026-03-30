@@ -10399,6 +10399,31 @@
       "archetype": null,
       "image_id": 21015833,
       "image": "images/cards/21015833.jpg"
+    },
+    {
+      "owner": "asapaska",
+      "cardid": 3030892,
+      "name": "Test Ape",
+      "quantity": 1,
+      "set_code": "GLAS-EN025",
+      "set_name": "Gladiator's Assault",
+      "rarity": "Common",
+      "condition": "",
+      "edition": "",
+      "type": "Effect Monster",
+      "frameType": "effect",
+      "race": "Beast",
+      "attribute": "EARTH",
+      "level": 2,
+      "rank": null,
+      "atk": 700,
+      "def": 300,
+      "linkval": null,
+      "linkmarkers": null,
+      "scale": null,
+      "archetype": "Gladiator Beast",
+      "image_id": 3030892,
+      "image": "images/cards/3030892.jpg"
     }
   ],
   "retroid99": [
