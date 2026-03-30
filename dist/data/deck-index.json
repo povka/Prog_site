@@ -1,0 +1,55 @@
+{
+  "weeks": {
+    "1": {
+      "setName": "Legend of Blue Eyes White Dragon",
+      "players": {
+        "asapaska": {
+          "image": "/images/decks/week1-asa.jpg"
+        },
+        "mhkaixer": {
+          "image": "/images/decks/week1-kaixer.jpg"
+        },
+        "retroid99": {
+          "image": "/images/decks/week1-retroid.jpg"
+        },
+        "shiruba": {
+          "image": "/images/decks/week1-shiruba.jpg"
+        }
+      }
+    },
+    "2": {
+      "setName": "Metal Raiders",
+      "players": {
+        "asapaska": {
+          "image": "/images/decks/week2-asa.jpg"
+        },
+        "mhkaixer": {
+          "image": "/images/decks/week2-kaixer.jpg"
+        },
+        "retroid99": {
+          "image": "/images/decks/week2-retroid.jpg"
+        },
+        "shiruba": {
+          "image": "/images/decks/week2-shiruba.jpg"
+        }
+      }
+    },
+    "3": {
+      "setName": "Spell Ruler",
+      "players": {
+        "asapaska": {
+          "image": "/images/decks/week3-asa.jpg"
+        },
+        "mhkaixer": {
+          "image": "/images/decks/week3-kaixer.jpg"
+        },
+        "retroid99": {
+          "image": "/images/decks/week3-retroid.jpg"
+        },
+        "shiruba": {
+          "image": "/images/decks/week3-shiruba.jpg"
+        }
+      }
+    }
+  }
+}

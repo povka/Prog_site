@@ -77,15 +77,43 @@ export default {
         return Response.json({ type: 1 });
       }
 
-      const commandName = body.data?.name;
+        const commandName = body.data?.name;
         const options = body.data?.options ?? [];
 
         if (commandName === "deck") {
-        const player = options.find(o => o.name === "player")?.value;
-        const week = options.find(o => o.name === "week")?.value;
+        const playerInput = options.find(o => o.name === "player")?.value;
+        const weekInput = options.find(o => o.name === "week")?.value;
 
-        // Replace this with one real public deck image URL from your site
-        const TEST_DECK_IMAGE_URL = "https://asapaskaprog.asapaska3.workers.dev/images/test-deck.png";
+        const player = String(playerInput || "").trim().toLowerCase();
+        const week = String(weekInput || "").trim();
+
+        const indexUrl = new URL("/data/deck-index.json", url.origin);
+        const indexResp = await env.ASSETS.fetch(new Request(indexUrl.toString()));
+
+        if (!indexResp.ok) {
+            return Response.json({
+            type: 4,
+            data: {
+                content: "Deck index file is missing."
+            }
+            });
+        }
+
+        const deckIndex = await indexResp.json();
+        const weekData = deckIndex?.weeks?.[week];
+        const playerData = weekData?.players?.[player];
+
+        if (!weekData || !playerData?.image) {
+            return Response.json({
+            type: 4,
+            data: {
+                content: `No deck image found for player "${player}" in week ${week}.`
+            }
+            });
+        }
+
+        const imageUrl = new URL(playerData.image, url.origin).toString();
+        const setName = weekData.setName || `Week ${week}`;
 
         return Response.json({
             type: 4,
@@ -93,22 +121,16 @@ export default {
             embeds: [
                 {
                 title: `Deck - ${player} - Week ${week}`,
+                description: `Set: **${setName}**`,
                 color: 0xF1C40F,
                 image: {
-                    url: TEST_DECK_IMAGE_URL
+                    url: imageUrl
                 }
                 }
             ]
             }
         });
         }
-
-        return Response.json({
-        type: 4,
-        data: {
-            content: "Unknown command."
-        }
-        });
     }
 
     return env.ASSETS.fetch(request);
