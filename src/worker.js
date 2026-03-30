@@ -1,3 +1,52 @@
+function hexToUint8Array(hex) {
+  if (!hex || hex.length % 2 !== 0) {
+    throw new Error("Invalid hex string");
+  }
+
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+let cachedDiscordKeyPromise = null;
+
+function getDiscordPublicKey(publicKeyHex) {
+  if (!cachedDiscordKeyPromise) {
+    cachedDiscordKeyPromise = crypto.subtle.importKey(
+      "raw",
+      hexToUint8Array(publicKeyHex),
+      { name: "Ed25519" },
+      false,
+      ["verify"]
+    );
+  }
+  return cachedDiscordKeyPromise;
+}
+
+async function verifyDiscordRequest(request, publicKeyHex) {
+  const signature = request.headers.get("x-signature-ed25519");
+  const timestamp = request.headers.get("x-signature-timestamp");
+
+  if (!signature || !timestamp) {
+    return { ok: false, bodyText: null };
+  }
+
+  const bodyText = await request.text();
+  const message = new TextEncoder().encode(timestamp + bodyText);
+
+  const publicKey = await getDiscordPublicKey(publicKeyHex);
+  const isValid = await crypto.subtle.verify(
+    { name: "Ed25519" },
+    publicKey,
+    hexToUint8Array(signature),
+    message
+  );
+
+  return { ok: isValid, bodyText };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -7,21 +56,32 @@ export default {
         return new Response("Method Not Allowed", { status: 405 });
       }
 
+      const verification = await verifyDiscordRequest(
+        request,
+        env.DISCORD_PUBLIC_KEY
+      );
+
+      if (!verification.ok) {
+        return new Response("Bad request signature.", { status: 401 });
+      }
+
       let body;
       try {
-        body = await request.json();
+        body = JSON.parse(verification.bodyText);
       } catch {
         return new Response("Bad Request", { status: 400 });
       }
 
+      // Discord endpoint handshake
       if (body.type === 1) {
         return Response.json({ type: 1 });
       }
 
+      // Temporary placeholder until /deck is added
       return Response.json({
         type: 4,
         data: {
-          content: "Thicc Magician Girl received something, but no command handler exists yet."
+          content: "Thicc Magician Girl is verified and listening."
         }
       });
     }
