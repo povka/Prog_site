@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Archetype Archive • Prog with the Bois</title>
+  <meta name="description" content="Browse every progression week where a chosen archetype showed up." />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div>
+        <p class="eyebrow">Yu-Gi-Oh! Progression</p>
+        <h1>Archetype Archive</h1>
+      </div>
+      <nav class="nav">
+        <a href="index.html#results">Results</a>
+        <a href="index.html#decklists">Decklists</a>
+        <a href="index.html#binders">Binders</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="pill">Focused View</span>
+          <h2 id="archetypeHeroName">Loading...</h2>
+          <strong id="archetypeHeroDescription">
+            Pulling every qualifying week and keeping all four decks together for context.
+          </strong>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="index.html#decklists">Back to Decklists</a>
+          </div>
+        </div>
+
+        <aside class="card snapshot">
+          <p class="section-label">Quick Snapshot</p>
+          <div id="archetypeSnapshotGrid" class="snapshot-grid"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="container section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Decklists</p>
+          <h3 id="archetypeSectionTitle">Loading Archetype...</h3>
+        </div>
+        <p id="archetypeSectionNote" class="muted">
+          Showing every week where this archetype appeared.
+        </p>
+      </div>
+
+      <div id="archetypeWeekSections" class="archetype-week-sections"></div>
+    </section>
+  </main>
+
+  <div id="imageModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close="true"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" type="button" id="closeModal" aria-label="Close popup">×</button>
+      <p id="modalTitle" class="modal-title"></p>
+
+      <div class="modal-media">
+        <div class="modal-image-wrap">
+          <img id="modalImage" class="modal-image" src="" alt="">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="archetype.js"></script>
+</body>
+</html>

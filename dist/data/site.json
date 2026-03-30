@@ -5,7 +5,7 @@
   },
   "snapshot": [
     { "label": "Latest Winner", "value": "asapaska" },
-    { "label": "Current Format", "value": "Spell Ruler" },
+    { "label": "Last Format", "value": "Spell Ruler" },
     { "label": "Weeks Played", "value": "3" },
     { "label": "Overall Winner", "value": "asapaska" }
   ],

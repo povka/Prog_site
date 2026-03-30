@@ -130,6 +130,8 @@ def build_deck_stats_entry(deck: dict, week_key: str, week_label: str, card_inde
             "resolvedCards": 0,
             "unresolvedCards": 0,
             "topArchetypes": [],
+            "archetypes": [],
+            "topArchetypes": [],
         }
 
     sections = parse_ydk_file(ydk_file)
@@ -154,6 +156,8 @@ def build_deck_stats_entry(deck: dict, week_key: str, week_label: str, card_inde
             archetype_copies[archetype] += 1
             archetype_unique_cards[archetype].add(name)
 
+    archetype_rows = sort_deck_archetypes(archetype_copies, archetype_unique_cards)
+
     return {
         "weekKey": week_key,
         "weekLabel": week_label,
@@ -161,9 +165,13 @@ def build_deck_stats_entry(deck: dict, week_key: str, week_label: str, card_inde
         "title": safe_text(deck.get("title")),
         "ydk": ydk_asset_path,
         "missing": False,
+        "mainCount": len(sections["main"]),
+        "extraCount": len(sections["extra"]),
+        "sideCount": len(sections["side"]),
         "resolvedCards": resolved_cards,
         "unresolvedCards": unresolved_cards,
-        "topArchetypes": sort_deck_archetypes(archetype_copies, archetype_unique_cards)[:8],
+        "archetypes": archetype_rows,
+        "topArchetypes": archetype_rows[:8],
     }
 
 

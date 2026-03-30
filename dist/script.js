@@ -114,19 +114,33 @@ function getDeckPlayersInOrder() {
   return players;
 }
 
+function buildArchetypeHref(name) {
+  return `archetype.html?name=${encodeURIComponent(safeText(name))}`;
+}
+
+function renderArchetypeChip(item, type = "default") {
+  const name = safeText(item.name) || "Unknown";
+  const suffix = type === "player"
+    ? `<b>${item.decks}</b>`
+    : `· ${item.copies}`;
+
+  return `
+    <a
+      class="deck-chip deck-chip-link${type === "current" ? " deck-chip-current" : ""}"
+      href="${buildArchetypeHref(name)}"
+      title="Open ${name} archive"
+    >
+      ${name} ${suffix}
+    </a>
+  `;
+}
+
 function renderDeckChipRow(items, type = "default") {
   if (!Array.isArray(items) || !items.length) {
     return `<span class="deck-chip deck-chip-muted">No archetype data</span>`;
   }
 
-  return items.map((item) => {
-    const name = safeText(item.name) || "Unknown";
-    const suffix = type === "player"
-      ? `<b>${item.decks}</b>`
-      : `· ${item.copies}`;
-
-    return `<span class="deck-chip${type === "current" ? " deck-chip-current" : ""}">${name} ${suffix}</span>`;
-  }).join("");
+  return items.map((item) => renderArchetypeChip(item, type)).join("");
 }
 
 function toNumber(value) {
@@ -1200,7 +1214,5 @@ async function init() {
   updateFiltersToggleButton();
   loadBinder(binderPlayer.value);
 }
-
-init();
 
 init();

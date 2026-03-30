@@ -7,8 +7,33 @@
       "title": "Week 1 • Troid won purely off skill Deck",
       "ydk": "data/decks/week1-retroid.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Gaia The Fierce Knight",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Celtic Guard",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Dark Magician",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Gaia The Fierce Knight",
@@ -39,8 +64,33 @@
       "title": "Week 1 • MHKaixer Deck",
       "ydk": "data/decks/week1-kaixer.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 3,
+      "sideCount": 0,
       "resolvedCards": 43,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Umi",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Dark Magician",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Umi",
@@ -71,8 +121,33 @@
       "title": "Week 1 • asapaska Deck",
       "ydk": "data/decks/week1-asa.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 12,
+      "sideCount": 0,
       "resolvedCards": 52,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Book of",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Skull Servant",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Book of",
@@ -103,8 +178,18 @@
       "title": "Week 2 • Retroid99 Deck",
       "ydk": "data/decks/week2-retroid.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Madoor",
+          "copies": 3,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Madoor",
@@ -120,8 +205,33 @@
       "title": "Week 2 • MHKaixer Deck",
       "ydk": "data/decks/week2-kaixer.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Harpie",
+          "copies": 4,
+          "uniqueCards": 3
+        },
+        {
+          "name": "Madoor",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Mask",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Harpie",
@@ -152,8 +262,28 @@
       "title": "Week 2 • asapaska Deck",
       "ydk": "data/decks/week2-asa.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 15,
+      "sideCount": 0,
       "resolvedCards": 55,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Thunder Dragon",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Greed",
@@ -179,8 +309,28 @@
       "title": "Week 2 • ShirubaMaebure Deck",
       "ydk": "data/decks/week2-shiruba.ydk",
       "missing": false,
+      "mainCount": 41,
+      "extraCount": 3,
+      "sideCount": 0,
       "resolvedCards": 44,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Thunder Dragon",
+          "copies": 4,
+          "uniqueCards": 2
+        },
+        {
+          "name": "Gaia The Fierce Knight",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Kuriboh",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Thunder Dragon",
@@ -206,8 +356,23 @@
       "title": "Week 3 • Retroid99 Deck",
       "ydk": "data/decks/week3-retroid.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Harpie",
+          "copies": 7,
+          "uniqueCards": 3
+        },
+        {
+          "name": "Eyes Restrict",
+          "copies": 3,
+          "uniqueCards": 2
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Harpie",
@@ -228,8 +393,33 @@
       "title": "Week 3 • MHKaixer Deck",
       "ydk": "data/decks/week3-kaixer.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Gravekeeper's",
+          "copies": 3,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Nimble",
+          "copies": 3,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Mask",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Gravekeeper's",
@@ -260,8 +450,23 @@
       "title": "Week 3 • asapaska Deck",
       "ydk": "data/decks/week3-asa.ydk",
       "missing": false,
+      "mainCount": 40,
+      "extraCount": 15,
+      "sideCount": 0,
       "resolvedCards": 55,
       "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Thunder Dragon",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
       "topArchetypes": [
         {
           "name": "Greed",
