@@ -848,8 +848,11 @@ p{color:var(--ink-soft)}
 }
 
 .modal-image{
-  width:100%;
+  display:block;
+  width:auto;
+  max-width:100%;
   max-height:75vh;
+  height:auto;
   object-fit:contain;
   background:#0b1025;
   border:1px solid var(--inner-line);
@@ -1031,11 +1034,18 @@ p{color:var(--ink-soft)}
   }
 
   .modal-banlist-badge{
-  top:10px;
-  left:10px;
-  width:44px;
-  height:44px;
-}
+    top:10px;
+    left:10px;
+    width:44px;
+    height:44px;
+  }
+
+  .modal-banlist-badge{
+    top:10px;
+    left:10px;
+    width:44px;
+    height:44px;
+  }
 }
 
 @media (max-width: 560px){
@@ -1325,6 +1335,10 @@ p{color:var(--ink-soft)}
 
 .modal-image-wrap{
   position:relative;
+  display:inline-block;
+  width:auto;
+  max-width:100%;
+  line-height:0;
 }
 
 .modal-banlist-badge{
@@ -1334,4 +1348,27 @@ p{color:var(--ink-soft)}
   height:56px;
   z-index:3;
   filter:drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+.modal-media{
+  display:flex;
+  justify-content:center;
+}
+
+.modal-banlist-badge{
+  position:absolute;
+  top:12px;
+  left:12px;
+  width:56px;
+  height:56px;
+  z-index:3;
+  pointer-events:none;
+  filter:drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+.modal-banlist-icon{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain;
 }
