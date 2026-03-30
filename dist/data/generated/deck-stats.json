@@ -96,20 +96,6 @@
         }
       ]
     },
-    "data/decks/week1-shiruba.ydk": {
-      "weekKey": "week1",
-      "weekLabel": "Week 1 • Legend of Blue Eyes White Dragon",
-      "player": "ShirubaMaebure",
-      "title": "Week 1 • ShirubaMaebure Deck",
-      "ydk": "data/decks/week1-shiruba.ydk",
-      "missing": true,
-      "mainCount": 0,
-      "extraCount": 0,
-      "sideCount": 0,
-      "resolvedCards": 0,
-      "unresolvedCards": 0,
-      "topArchetypes": []
-    },
     "data/decks/week2-retroid.ydk": {
       "weekKey": "week2",
       "weekLabel": "Week 2 • Metal Raiders",
@@ -288,20 +274,6 @@
           "uniqueCards": 1
         }
       ]
-    },
-    "data/decks/week3-shiruba.ydk": {
-      "weekKey": "week3",
-      "weekLabel": "Week 3 • Spell Ruler",
-      "player": "ShirubaMaebure",
-      "title": "Week 3 • ShirubaMaebure Deck",
-      "ydk": "data/decks/week3-shiruba.ydk",
-      "missing": true,
-      "mainCount": 0,
-      "extraCount": 0,
-      "sideCount": 0,
-      "resolvedCards": 0,
-      "unresolvedCards": 0,
-      "topArchetypes": []
     }
   },
   "playerStats": {
