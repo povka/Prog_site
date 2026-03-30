@@ -47,6 +47,33 @@ async function verifyDiscordRequest(request, publicKeyHex) {
   return { ok: isValid, bodyText };
 }
 
+function safeText(value) {
+  return value ? String(value).trim() : "";
+}
+
+function normalizeAssetPath(value) {
+  return safeText(value)
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+function truncateLabel(value, max = 80) {
+  const text = safeText(value);
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
+function buildArchetypeUrl(origin, name) {
+  return new URL(
+    `/archetype.html?name=${encodeURIComponent(safeText(name))}`,
+    origin
+  ).toString();
+}
+
+function getCommandOption(options, name) {
+  return options.find((o) => o.name === name)?.value;
+}
+
 function normalizeName(value) {
   return safeText(value).toLowerCase();
 }
@@ -77,33 +104,6 @@ function sumRowQuantities(rows) {
   return rows.reduce((sum, row) => sum + (toNumber(row?.quantity) ?? 1), 0);
 }
 
-function safeText(value) {
-  return value ? String(value).trim() : "";
-}
-
-function normalizeAssetPath(value) {
-  return safeText(value)
-    .replace(/\\/g, "/")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
-}
-
-function truncateLabel(value, max = 80) {
-  const text = safeText(value);
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
-
-function buildArchetypeUrl(origin, name) {
-  return new URL(
-    `/archetype.html?name=${encodeURIComponent(safeText(name))}`,
-    origin
-  ).toString();
-}
-
-function getCommandOption(options, name) {
-  return options.find((o) => o.name === name)?.value;
-}
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -132,6 +132,7 @@ export default {
       return new Response("Bad Request", { status: 400 });
     }
 
+    // Discord PING
     if (body.type === 1) {
       return Response.json({ type: 1 });
     }
@@ -279,13 +280,9 @@ export default {
       const perPlayer = players.map((player, index) => {
         const rows = binderJsons[index];
 
-        const exactMatches = rows.filter(
+        const matches = rows.filter(
           (row) => normalizeName(row?.name) === queryKey
         );
-
-        const matches = exactMatches.length
-          ? exactMatches
-          : rows.filter((row) => normalizeName(row?.name).includes(queryKey));
 
         const quantity = sumRowQuantities(matches);
 
@@ -305,7 +302,7 @@ export default {
         return Response.json({
           type: 4,
           data: {
-            content: `No binder entries found for "${query}".`
+            content: `No exact binder entries found for "${query}".`
           }
         });
       }
