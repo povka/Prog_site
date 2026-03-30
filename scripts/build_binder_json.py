@@ -558,9 +558,10 @@ def build_card_index(cards):
 
         card_images = card.get("card_images", []) or []
         first_image = card_images[0] if card_images else {}
+        default_image_id = safe_int(first_image.get("id"), card_id)
 
-        index[str(card_id)] = {
-            "cardid": card_id,
+        base_meta = {
+            "cardid": card_id,  # canonical YGOPRODeck card id
             "name": card.get("name"),
             "type": card.get("type"),
             "frameType": card.get("frameType"),
@@ -575,9 +576,26 @@ def build_card_index(cards):
             "linkval": card.get("linkval"),
             "linkmarkers": card.get("linkmarkers"),
             "scale": card.get("scale"),
-            "image_id": first_image.get("id", card_id),
-            "image": f"images/cards/{first_image.get('id', card_id)}.jpg",
         }
+
+        # Canonical lookup by the main card id
+        index[str(card_id)] = {
+            **base_meta,
+            "image_id": default_image_id,
+            "image": f"images/cards/{default_image_id}.jpg",
+        }
+
+        # Also index every artwork/image id so censored/uncensored variants resolve
+        for image in card_images:
+            image_id = safe_int(image.get("id") or image.get("image_id"), None)
+            if image_id is None:
+                continue
+
+            index[str(image_id)] = {
+                **base_meta,
+                "image_id": image_id,
+                "image": f"images/cards/{image_id}.jpg",
+            }
 
     return index
 
@@ -629,6 +647,7 @@ def fetch_remote_binder_cards(binder_id, token):
 def build_output_row(owner, api_row, card_index):
     cardid_raw = api_row.get("cardId", "")
     cardid_str = str(cardid_raw).strip()
+    numeric_cardid = safe_int(cardid_str, None)
     meta = card_index.get(cardid_str)
 
     fallback_name = (api_row.get("name") or "").strip()
@@ -638,7 +657,6 @@ def build_output_row(owner, api_row, card_index):
     rarity = (api_row.get("rarity") or "").strip()
 
     if not meta:
-        numeric_cardid = safe_int(cardid_str, None)
         return {
             "owner": owner,
             "cardid": numeric_cardid,
@@ -667,7 +685,7 @@ def build_output_row(owner, api_row, card_index):
 
     return {
         "owner": owner,
-        "cardid": meta["cardid"],
+        "cardid": numeric_cardid if numeric_cardid is not None else meta["cardid"],
         "name": fallback_name or meta["name"],
         "quantity": quantity,
         "set_code": set_code,
