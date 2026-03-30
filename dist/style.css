@@ -1106,7 +1106,8 @@ p{color:var(--ink-soft)}
 .binder-controls-sort-top-row{
   display:grid;
   grid-template-columns:minmax(220px, 0.9fr) minmax(0, 1.35fr);
-  gap:12px;
+  column-gap:20px;
+  row-gap:12px;
   align-items:stretch;
 }
 
