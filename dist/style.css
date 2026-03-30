@@ -1083,10 +1083,10 @@ p{color:var(--ink-soft)}
   }
 }
 
-#binderPlayer{
-  font-weight:700;
-  letter-spacing:0.01em;
-  color:#f3f6ff;
+#binderPlayer,
+#binderBanlist,
+#binderSort{
+  width:100%;
 }
 
 .binder-controls-sort-spacer{
@@ -1105,7 +1105,7 @@ p{color:var(--ink-soft)}
 
 .binder-controls-sort-top-row{
   display:grid;
-  grid-template-columns:minmax(220px, 0.9fr) minmax(0, 1.35fr);
+  grid-template-columns:clamp(220px, 26vw, 390px) minmax(0, 1fr);
   column-gap:20px;
   row-gap:12px;
   align-items:stretch;
@@ -1121,7 +1121,7 @@ p{color:var(--ink-soft)}
   grid-template-columns:minmax(0, 1fr) 52px auto;
   gap:10px;
   align-items:stretch;
-  justify-self:end;
+  justify-self:stretch;
 }
 
 .binder-controls-sort-box .deck-select{
