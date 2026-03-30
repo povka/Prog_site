@@ -93,6 +93,22 @@ function truncateLabel(value, max = 80) {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
+        function safeText(value) {
+  return value ? String(value).trim() : "";
+}
+
+function normalizeAssetPath(value) {
+  return safeText(value)
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+function truncateLabel(value, max = 80) {
+  const text = safeText(value);
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
         const commandName = body.data?.name;
         const options = body.data?.options ?? [];
 
