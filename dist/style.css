@@ -438,19 +438,6 @@ p{color:var(--ink-soft)}
   background:linear-gradient(180deg, rgba(21,29,67,0.95), rgba(12,18,43,0.95));
 }
 
-.deck-gallery-card{
-  position:relative;
-  padding:0;
-  border:1px solid var(--inner-line);
-  border-radius:22px;
-  background:#121835;
-  overflow:hidden;
-  cursor:pointer;
-  text-align:left;
-  transition:border-color .18s ease, box-shadow .18s ease;
-  box-shadow:0 8px 20px rgba(0,0,0,0.22);
-}
-
 .deck-gallery-card::after{
   content:"";
   position:absolute;
@@ -491,14 +478,6 @@ p{color:var(--ink-soft)}
   aspect-ratio:16 / 10;
   object-fit:cover;
   display:block;
-}
-
-.deck-gallery-meta{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-end;
-  gap:14px;
-  padding:16px 18px;
 }
 
 .deck-gallery-player{
@@ -949,6 +928,10 @@ p{color:var(--ink-soft)}
   #binders .deck-browser-card::before{
     width:52px;
   }
+
+  .deck-player-stats-grid{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width: 820px){
@@ -1382,4 +1365,225 @@ p{color:var(--ink-soft)}
 
 .binder-controls-sort-left{
   min-width:0;
+}
+
+.deck-player-stats-section{
+  margin-bottom:18px;
+  padding:16px;
+  border:2px solid var(--line);
+  border-radius:22px;
+  background:linear-gradient(180deg, rgba(21,29,67,0.95), rgba(12,18,43,0.95));
+}
+
+.deck-player-stats-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.deck-player-stats-note{
+  margin:0;
+  color:var(--ink-soft);
+  font-size:0.82rem;
+  font-weight:600;
+}
+
+.deck-player-stats-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}
+
+.deck-player-stat-card{
+  padding:16px;
+  border:1px solid var(--inner-line);
+  border-radius:18px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  box-shadow:0 8px 20px rgba(0,0,0,0.16);
+}
+
+.deck-player-stat-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.deck-player-stat-count{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  padding:6px 10px;
+  border:1px solid var(--inner-line);
+  border-radius:999px;
+  background:rgba(255,255,255,0.04);
+  color:#eef4ff;
+  font-size:0.76rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+}
+
+.deck-player-stat-section + .deck-player-stat-section{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid var(--inner-line);
+}
+
+.deck-player-stat-label{
+  display:block;
+  margin-bottom:8px;
+  color:var(--ink-soft);
+  font-size:0.74rem;
+  font-weight:800;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+.deck-chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.deck-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:32px;
+  padding:6px 10px;
+  border:1px solid var(--inner-line);
+  border-radius:999px;
+  background:linear-gradient(135deg, rgba(94,200,255,0.10), rgba(141,91,255,0.14));
+  color:#f2f6ff;
+  font-size:0.78rem;
+  font-weight:800;
+  line-height:1;
+}
+
+.deck-chip b{
+  color:#98edff;
+  font-size:0.74rem;
+}
+
+.deck-chip-muted{
+  background:rgba(255,255,255,0.03);
+  color:var(--ink-soft);
+}
+
+.deck-chip-current{
+  border-color:rgba(94,200,255,0.34);
+}
+
+.deck-gallery-card{
+  cursor:default;
+}
+
+.deck-gallery-preview{
+  display:block;
+  width:100%;
+  padding:0;
+  border:0;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+}
+
+.deck-card-counts{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:12px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.deck-card-counts span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:5px 9px;
+  border:1px solid rgba(255,255,255,0.16);
+  border-radius:999px;
+  background:rgba(6,10,24,0.74);
+  backdrop-filter:blur(8px);
+  color:#f6f8ff;
+  font-size:0.72rem;
+  font-weight:800;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+.deck-gallery-meta{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:12px;
+  padding:16px 18px 10px;
+}
+
+.deck-gallery-copy{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+}
+
+.deck-gallery-title{
+  color:var(--ink-soft);
+  font-size:0.84rem;
+  line-height:1.2;
+}
+
+.deck-gallery-footer{
+  display:flex;
+  gap:10px;
+  padding:0 18px 18px;
+}
+
+.deck-action-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:linear-gradient(135deg, rgba(94,200,255,0.14), rgba(141,91,255,0.16));
+  color:#f7fbff;
+  font-size:0.78rem;
+  font-weight:800;
+  letter-spacing:0.04em;
+  text-decoration:none;
+  transition:0.18s ease;
+}
+
+.deck-action-button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 0 0 1px rgba(94,200,255,0.18), 0 0 18px rgba(94,200,255,0.08);
+}
+
+.deck-download-button{
+  background:rgba(255,255,255,0.04);
+}
+
+@media (max-width: 620px){
+  .deck-player-stats-header{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .deck-gallery-footer{
+    flex-direction:column;
+  }
+
+  .deck-action-button{
+    width:100%;
+  }
 }

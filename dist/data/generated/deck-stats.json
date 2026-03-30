@@ -1,0 +1,473 @@
+{
+  "byYdk": {
+    "data/decks/week1-retroid.ydk": {
+      "weekKey": "week1",
+      "weekLabel": "Week 1 • Legend of Blue Eyes White Dragon",
+      "player": "Retroid99",
+      "title": "Week 1 • Troid won purely off skill Deck",
+      "ydk": "data/decks/week1-retroid.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 40,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Gaia The Fierce Knight",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Celtic Guard",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Dark Magician",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week1-kaixer.ydk": {
+      "weekKey": "week1",
+      "weekLabel": "Week 1 • Legend of Blue Eyes White Dragon",
+      "player": "MHKaixer",
+      "title": "Week 1 • MHKaixer Deck",
+      "ydk": "data/decks/week1-kaixer.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 3,
+      "sideCount": 0,
+      "resolvedCards": 43,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Umi",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Dark Magician",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week1-asa.ydk": {
+      "weekKey": "week1",
+      "weekLabel": "Week 1 • Legend of Blue Eyes White Dragon",
+      "player": "asapaska",
+      "title": "Week 1 • asapaska Deck",
+      "ydk": "data/decks/week1-asa.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 12,
+      "sideCount": 0,
+      "resolvedCards": 52,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Book of",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Skull Servant",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week1-shiruba.ydk": {
+      "weekKey": "week1",
+      "weekLabel": "Week 1 • Legend of Blue Eyes White Dragon",
+      "player": "ShirubaMaebure",
+      "title": "Week 1 • ShirubaMaebure Deck",
+      "ydk": "data/decks/week1-shiruba.ydk",
+      "missing": false,
+      "mainCount": 0,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 0,
+      "unresolvedCards": 0,
+      "topArchetypes": []
+    },
+    "data/decks/week2-retroid.ydk": {
+      "weekKey": "week2",
+      "weekLabel": "Week 2 • Metal Raiders",
+      "player": "Retroid99",
+      "title": "Week 2 • Retroid99 Deck",
+      "ydk": "data/decks/week2-retroid.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 40,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Madoor",
+          "copies": 3,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week2-kaixer.ydk": {
+      "weekKey": "week2",
+      "weekLabel": "Week 2 • Metal Raiders",
+      "player": "MHKaixer",
+      "title": "Week 2 • MHKaixer Deck",
+      "ydk": "data/decks/week2-kaixer.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 40,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Harpie",
+          "copies": 4,
+          "uniqueCards": 3
+        },
+        {
+          "name": "Madoor",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Mask",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week2-asa.ydk": {
+      "weekKey": "week2",
+      "weekLabel": "Week 2 • Metal Raiders",
+      "player": "asapaska",
+      "title": "Week 2 • asapaska Deck",
+      "ydk": "data/decks/week2-asa.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 15,
+      "sideCount": 0,
+      "resolvedCards": 55,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Madoor",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Thunder Dragon",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week2-shiruba.ydk": {
+      "weekKey": "week2",
+      "weekLabel": "Week 2 • Metal Raiders",
+      "player": "ShirubaMaebure",
+      "title": "Week 2 • ShirubaMaebure Deck",
+      "ydk": "data/decks/week2-shiruba.ydk",
+      "missing": false,
+      "mainCount": 41,
+      "extraCount": 3,
+      "sideCount": 0,
+      "resolvedCards": 44,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Thunder Dragon",
+          "copies": 4,
+          "uniqueCards": 2
+        },
+        {
+          "name": "Gaia The Fierce Knight",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Kuriboh",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week3-retroid.ydk": {
+      "weekKey": "week3",
+      "weekLabel": "Week 3 • Spell Ruler",
+      "player": "Retroid99",
+      "title": "Week 3 • Retroid99 Deck",
+      "ydk": "data/decks/week3-retroid.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 40,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Harpie",
+          "copies": 7,
+          "uniqueCards": 3
+        },
+        {
+          "name": "Eyes Restrict",
+          "copies": 3,
+          "uniqueCards": 2
+        }
+      ]
+    },
+    "data/decks/week3-kaixer.ydk": {
+      "weekKey": "week3",
+      "weekLabel": "Week 3 • Spell Ruler",
+      "player": "MHKaixer",
+      "title": "Week 3 • MHKaixer Deck",
+      "ydk": "data/decks/week3-kaixer.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 40,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Gravekeeper's",
+          "copies": 3,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Nimble",
+          "copies": 3,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Mask",
+          "copies": 2,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week3-asa.ydk": {
+      "weekKey": "week3",
+      "weekLabel": "Week 3 • Spell Ruler",
+      "player": "asapaska",
+      "title": "Week 3 • asapaska Deck",
+      "ydk": "data/decks/week3-asa.ydk",
+      "missing": false,
+      "mainCount": 40,
+      "extraCount": 15,
+      "sideCount": 0,
+      "resolvedCards": 55,
+      "unresolvedCards": 0,
+      "topArchetypes": [
+        {
+          "name": "Greed",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Thunder Dragon",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
+    },
+    "data/decks/week3-shiruba.ydk": {
+      "weekKey": "week3",
+      "weekLabel": "Week 3 • Spell Ruler",
+      "player": "ShirubaMaebure",
+      "title": "Week 3 • ShirubaMaebure Deck",
+      "ydk": "data/decks/week3-shiruba.ydk",
+      "missing": false,
+      "mainCount": 0,
+      "extraCount": 0,
+      "sideCount": 0,
+      "resolvedCards": 0,
+      "unresolvedCards": 0,
+      "topArchetypes": []
+    }
+  },
+  "playerStats": {
+    "retroid99": {
+      "playerDisplayName": "Retroid99",
+      "trackedDeckCount": 3,
+      "topArchetypes": [
+        {
+          "name": "Madoor",
+          "decks": 2,
+          "copies": 5
+        },
+        {
+          "name": "Harpie",
+          "decks": 1,
+          "copies": 7
+        },
+        {
+          "name": "Eyes Restrict",
+          "decks": 1,
+          "copies": 3
+        },
+        {
+          "name": "Gaia The Fierce Knight",
+          "decks": 1,
+          "copies": 2
+        },
+        {
+          "name": "Celtic Guard",
+          "decks": 1,
+          "copies": 1
+        },
+        {
+          "name": "Dark Magician",
+          "decks": 1,
+          "copies": 1
+        }
+      ]
+    },
+    "mhkaixer": {
+      "playerDisplayName": "MHKaixer",
+      "trackedDeckCount": 3,
+      "topArchetypes": [
+        {
+          "name": "Greed",
+          "decks": 3,
+          "copies": 3
+        },
+        {
+          "name": "Madoor",
+          "decks": 2,
+          "copies": 3
+        },
+        {
+          "name": "Mask",
+          "decks": 2,
+          "copies": 3
+        },
+        {
+          "name": "Harpie",
+          "decks": 1,
+          "copies": 4
+        },
+        {
+          "name": "Gravekeeper's",
+          "decks": 1,
+          "copies": 3
+        },
+        {
+          "name": "Nimble",
+          "decks": 1,
+          "copies": 3
+        },
+        {
+          "name": "Umi",
+          "decks": 1,
+          "copies": 2
+        },
+        {
+          "name": "Dark Magician",
+          "decks": 1,
+          "copies": 1
+        }
+      ]
+    },
+    "asapaska": {
+      "playerDisplayName": "asapaska",
+      "trackedDeckCount": 3,
+      "topArchetypes": [
+        {
+          "name": "Greed",
+          "decks": 3,
+          "copies": 3
+        },
+        {
+          "name": "Madoor",
+          "decks": 2,
+          "copies": 2
+        },
+        {
+          "name": "Thunder Dragon",
+          "decks": 2,
+          "copies": 2
+        },
+        {
+          "name": "Book of",
+          "decks": 1,
+          "copies": 2
+        },
+        {
+          "name": "Skull Servant",
+          "decks": 1,
+          "copies": 2
+        }
+      ]
+    },
+    "shirubamaebure": {
+      "playerDisplayName": "ShirubaMaebure",
+      "trackedDeckCount": 3,
+      "topArchetypes": [
+        {
+          "name": "Thunder Dragon",
+          "decks": 1,
+          "copies": 4
+        },
+        {
+          "name": "Gaia The Fierce Knight",
+          "decks": 1,
+          "copies": 1
+        },
+        {
+          "name": "Kuriboh",
+          "decks": 1,
+          "copies": 1
+        }
+      ]
+    }
+  }
+}

@@ -2,11 +2,14 @@ let deckData = {};
 let siteData = {};
 let currentBinderRows = [];
 let banlistStatusById = new Map();
+let deckStatsData = { byYdk: {}, playerStats: {} };
 
 const deckSearch = document.getElementById("deckSearch");
 const deckSelector = document.getElementById("deckSelector");
 const deckDisplay = document.getElementById("deckDisplay");
 const deckResultsLabel = document.getElementById("deckResultsLabel");
+const deckPlayerStatsSection = document.getElementById("deckPlayerStatsSection");
+const deckPlayerStatsGrid = document.getElementById("deckPlayerStatsGrid");
 
 const binderPlayer = document.getElementById("binderPlayer");
 const binderSearch = document.getElementById("binderSearch");
@@ -71,6 +74,59 @@ const binderBanlist = document.getElementById("binderBanlist");
 
 function safeText(value) {
   return value ? String(value).trim() : "";
+}
+
+function normalizeAssetPath(value) {
+  return safeText(value)
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+function formatDeckCount(value) {
+  return `${value} deck${value === 1 ? "" : "s"}`;
+}
+
+function getDeckStatsForDeck(deck) {
+  const ydkPath = normalizeAssetPath(deck?.ydk);
+  if (!ydkPath) return null;
+
+  const entry = deckStatsData?.byYdk?.[ydkPath] || null;
+  return entry && !entry.missing ? entry : null;
+}
+
+function getDeckPlayersInOrder() {
+  const seen = new Set();
+  const players = [];
+
+  Object.values(deckData).forEach((week) => {
+    (week?.decks || []).forEach((deck) => {
+      const player = safeText(deck.player);
+      const key = player.toLowerCase();
+
+      if (!player || seen.has(key)) return;
+
+      seen.add(key);
+      players.push(player);
+    });
+  });
+
+  return players;
+}
+
+function renderDeckChipRow(items, type = "default") {
+  if (!Array.isArray(items) || !items.length) {
+    return `<span class="deck-chip deck-chip-muted">No archetype data</span>`;
+  }
+
+  return items.map((item) => {
+    const name = safeText(item.name) || "Unknown";
+    const suffix = type === "player"
+      ? `<b>${item.decks}</b>`
+      : `· ${item.copies}`;
+
+    return `<span class="deck-chip${type === "current" ? " deck-chip-current" : ""}">${name} ${suffix}</span>`;
+  }).join("");
 }
 
 function toNumber(value) {
@@ -394,8 +450,20 @@ function renderResults() {
 }
 
 async function loadDeckData() {
-  const res = await fetch("data/decks.json");
-  deckData = await res.json();
+  const decksResponse = await fetch("data/decks.json");
+  deckData = await decksResponse.json();
+
+  try {
+    const statsResponse = await fetch("data/generated/deck-stats.json", {
+      cache: "no-store"
+    });
+
+    if (!statsResponse.ok) throw new Error("Failed to load deck stats");
+
+    deckStatsData = await statsResponse.json();
+  } catch {
+    deckStatsData = { byYdk: {}, playerStats: {} };
+  }
 
   deckSelector.innerHTML = Object.entries(deckData)
     .map(([key, week]) => `<option value="${key}">${week.label}</option>`)
@@ -405,30 +473,118 @@ async function loadDeckData() {
   if (firstKey) renderDecks(firstKey);
 }
 
+function renderDeckPlayerStats(selectedWeekKey) {
+  if (!deckPlayerStatsSection || !deckPlayerStatsGrid) return;
+
+  const players = getDeckPlayersInOrder();
+
+  if (!players.length) {
+    deckPlayerStatsSection.hidden = true;
+    deckPlayerStatsGrid.innerHTML = "";
+    return;
+  }
+
+  const selectedWeek = deckData[selectedWeekKey] || null;
+  deckPlayerStatsSection.hidden = false;
+  deckPlayerStatsGrid.innerHTML = "";
+
+  players.forEach((player) => {
+    const playerKey = safeText(player).toLowerCase();
+    const playerStats = deckStatsData?.playerStats?.[playerKey] || null;
+
+    const currentDeck = selectedWeek?.decks?.find(
+      (deck) => safeText(deck.player).toLowerCase() === playerKey
+    );
+
+    const currentDeckStats = currentDeck ? getDeckStatsForDeck(currentDeck) : null;
+
+    const article = document.createElement("article");
+    article.className = "deck-player-stat-card";
+
+    article.innerHTML = `
+      <div class="deck-player-stat-head">
+        <span class="deck-gallery-player">${safeText(player)}</span>
+        <span class="deck-player-stat-count">${formatDeckCount(playerStats?.trackedDeckCount || 0)}</span>
+      </div>
+
+      <div class="deck-player-stat-section">
+        <span class="deck-player-stat-label">Most played archetypes</span>
+        <div class="deck-chip-row">
+          ${renderDeckChipRow((playerStats?.topArchetypes || []).slice(0, 4), "player")}
+        </div>
+      </div>
+
+      <div class="deck-player-stat-section">
+        <span class="deck-player-stat-label">${safeText(selectedWeek?.label) || "Selected week"}</span>
+        <div class="deck-chip-row">
+          ${renderDeckChipRow((currentDeckStats?.topArchetypes || []).slice(0, 3), "current")}
+        </div>
+      </div>
+    `;
+
+    deckPlayerStatsGrid.appendChild(article);
+  });
+}
+
 function renderDecks(weekKey) {
   const week = deckData[weekKey];
   if (!week) return;
 
-  deckResultsLabel.textContent = `Showing decks for: ${week.label}`;
+  const trackedDecks = week.decks.filter((deck) => !!getDeckStatsForDeck(deck)).length;
+
+  deckResultsLabel.textContent =
+    `Showing decks for: ${week.label} • ${trackedDecks}/${week.decks.length} .ydk files linked`;
+
   deckDisplay.innerHTML = "";
+  renderDeckPlayerStats(weekKey);
 
   week.decks.forEach((deck) => {
-    const card = document.createElement("button");
+    const deckStats = getDeckStatsForDeck(deck);
+    const card = document.createElement("article");
     card.className = "deck-gallery-card";
-    card.type = "button";
+
+    const ydkPath = normalizeAssetPath(deck.ydk);
+
+    const countBadge = deckStats
+      ? `
+        <div class="deck-card-counts">
+          <span>M ${deckStats.mainCount}</span>
+          <span>E ${deckStats.extraCount}</span>
+          <span>S ${deckStats.sideCount}</span>
+        </div>
+      `
+      : "";
 
     card.innerHTML = `
-      <div class="deck-gallery-image-wrap">
-        <img src="${deck.image}" alt="${deck.title}" class="deck-gallery-image" />
-      </div>
+      <button class="deck-gallery-preview" type="button" aria-label="Open ${safeText(deck.title)} image">
+        <div class="deck-gallery-image-wrap">
+          <img src="${deck.image}" alt="${deck.title}" class="deck-gallery-image" />
+          ${countBadge}
+        </div>
+      </button>
+
       <div class="deck-gallery-meta">
-        <span class="deck-gallery-player">${deck.player}</span>
-        <span class="deck-gallery-action">Open full list</span>
+        <div class="deck-gallery-copy">
+          <span class="deck-gallery-player">${safeText(deck.player)}</span>
+          <span class="deck-gallery-title">${safeText(deck.title)}</span>
+        </div>
+
+        <div class="deck-chip-row">
+          ${renderDeckChipRow((deckStats?.topArchetypes || []).slice(0, 3))}
+        </div>
+      </div>
+
+      <div class="deck-gallery-footer">
+        <button type="button" class="deck-action-button deck-open-button">Open image</button>
+        ${ydkPath ? `<a href="${ydkPath}" class="deck-action-button deck-download-button" download>Download .ydk</a>` : ""}
       </div>
     `;
 
-    card.addEventListener("click", () => {
-      openModal(deck.image, deck.title);
+    const openButtons = card.querySelectorAll(".deck-gallery-preview, .deck-open-button");
+    openButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        openModal(deck.image, deck.title);
+      });
     });
 
     deckDisplay.appendChild(card);

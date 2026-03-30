@@ -41,6 +41,10 @@ jobs:
           YGOPROG_PASS_SHIRUBA: ${{ secrets.YGOPROG_PASS_SHIRUBA }}
         run: python scripts/build_binder_json.py
 
+        
+      - name: Build deck stats
+        run: python scripts/build_deck_stats.py
+
       - name: Upload login debug artifacts
         if: failure()
         uses: actions/upload-artifact@v4
