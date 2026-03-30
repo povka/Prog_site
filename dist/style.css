@@ -1029,6 +1029,13 @@ p{color:var(--ink-soft)}
     margin:18px auto;
     padding:16px;
   }
+
+  .modal-banlist-badge{
+  top:10px;
+  left:10px;
+  width:44px;
+  height:44px;
+}
 }
 
 @media (max-width: 560px){
@@ -1314,4 +1321,17 @@ p{color:var(--ink-soft)}
     text-align:center;
     padding:6px 10px;
   }
+}
+
+.modal-image-wrap{
+  position:relative;
+}
+
+.modal-banlist-badge{
+  top:14px;
+  left:14px;
+  width:56px;
+  height:56px;
+  z-index:3;
+  filter:drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
 }

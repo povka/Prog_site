@@ -31,6 +31,8 @@ let binderSortDirection = "asc";
 
 const modal = document.getElementById("imageModal");
 const modalImage = document.getElementById("modalImage");
+const modalBanlistBadge = document.getElementById("modalBanlistBadge");
+const modalBanlistIcon = document.getElementById("modalBanlistIcon");
 const modalTitle = document.getElementById("modalTitle");
 const closeModalButton = document.getElementById("closeModal");
 
@@ -177,6 +179,16 @@ function getBanlistIconForRow(row) {
   return "";
 }
 
+function getBanlistLabelForRow(row) {
+  const status = getBanlistStatusForRow(row);
+
+  if (status === 0) return "Forbidden";
+  if (status === 1) return "Limited";
+  if (status === 2) return "Semi-Limited";
+
+  return "";
+}
+
 function parseMultiSearchTerms(value) {
   return safeText(value)
     .toLowerCase()
@@ -185,10 +197,23 @@ function parseMultiSearchTerms(value) {
     .filter(Boolean);
 }
 
-function openModal(src, title) {
+function openModal(src, title, options = {}) {
+  const { banlistIcon = "", banlistLabel = "" } = options;
+
   modalImage.src = src;
   modalImage.alt = title;
   modalTitle.textContent = title;
+
+  if (banlistIcon) {
+    modalBanlistIcon.src = banlistIcon;
+    modalBanlistIcon.alt = banlistLabel ? `${banlistLabel} status` : "Banlist status";
+    modalBanlistBadge.hidden = false;
+  } else {
+    modalBanlistIcon.src = "";
+    modalBanlistIcon.alt = "";
+    modalBanlistBadge.hidden = true;
+  }
+
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
@@ -199,6 +224,9 @@ function closeModal() {
   modal.setAttribute("aria-hidden", "true");
   modalImage.src = "";
   modalImage.alt = "";
+  modalBanlistIcon.src = "";
+  modalBanlistIcon.alt = "";
+  modalBanlistBadge.hidden = true;
   document.body.classList.remove("modal-open");
 }
 
@@ -852,7 +880,10 @@ function renderBinder(rows) {
 
     if (imageUrl) {
       card.addEventListener("click", () => {
-        openModal(imageUrl, safeText(row.name) || "Card Image");
+        openModal(imageUrl, safeText(row.name) || "Card Image", {
+          banlistIcon,
+          banlistLabel: getBanlistLabelForRow(row)
+        });
       });
     }
 
