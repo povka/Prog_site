@@ -139,25 +139,26 @@ function collectArchetypeWeeks(archetypeName) {
   const groups = [];
 
   Object.entries(deckData).forEach(([weekKey, week]) => {
-    const allDecks = (week?.decks || []).map((deck) => {
-      const stats = getDeckStatsForDeck(deck);
-      const match = findArchetypeMatch(stats, archetypeName);
+    const matchedDecks = (week?.decks || [])
+      .map((deck) => {
+        const stats = getDeckStatsForDeck(deck);
+        const match = findArchetypeMatch(stats, archetypeName);
 
-      return {
-        deck,
-        stats,
-        match
-      };
-    });
+        if (!match) return null;
 
-    const matchedDecks = allDecks.filter((entry) => !!entry.match);
+        return {
+          deck,
+          stats,
+          match
+        };
+      })
+      .filter(Boolean);
 
     if (!matchedDecks.length) return;
 
     groups.push({
       weekKey,
       label: safeText(week?.label) || weekKey,
-      decks: allDecks,
       matchedDecks
     });
   });
@@ -167,8 +168,7 @@ function collectArchetypeWeeks(archetypeName) {
 
 function renderSnapshot(groups) {
   const qualifyingWeeks = groups.length;
-  const renderedDecks = groups.reduce((sum, group) => sum + group.decks.length, 0);
-  const matchedDecks = groups.reduce((sum, group) => sum + group.matchedDecks.length, 0);
+  const renderedDecks = groups.reduce((sum, group) => sum + group.matchedDecks.length, 0);
 
   const players = new Set();
   groups.forEach((group) => {
@@ -180,8 +180,8 @@ function renderSnapshot(groups) {
 
   const items = [
     { label: "Weeks Found", value: qualifyingWeeks },
-    { label: "Decks Rendered", value: renderedDecks },
-    { label: "Matched Decks", value: matchedDecks },
+    { label: "Decks Shown", value: renderedDecks },
+    { label: "Matched Decks", value: renderedDecks },
     { label: "Players On It", value: players.size }
   ];
 
@@ -233,23 +233,19 @@ function renderWeekSections(groups, archetypeName) {
             <p class="section-label">Week</p>
             <h4>${weekLabel}</h4>
           </div>
-          <div class="winner-badge">${matchCount} ${matchCount === 1 ? "match" : "matches"}</div>
+          <div class="winner-badge">${matchCount} ${matchCount === 1 ? "deck" : "decks"}</div>
         </div>
 
         <div class="archetype-week-body">
           <div class="archetype-deck-grid">
-            ${group.decks.map(({ deck, stats, match }) => {
+            ${group.matchedDecks.map(({ deck, stats, match }) => {
               const image = safeText(deck?.image);
               const title = safeText(deck?.title) || `${safeText(deck?.player)} Deck`;
               const player = safeText(deck?.player) || "Unknown";
               const ydkPath = normalizeAssetPath(deck?.ydk);
 
-              const statusChip = match
-                ? `<span class="deck-chip deck-chip-current archetype-match-chip">${escapeHtml(match.name)} · ${match.copies}</span>`
-                : `<span class="deck-chip deck-chip-muted">Context deck</span>`;
-
               return `
-                <article class="deck-gallery-card archetype-deck-card${match ? " is-match" : " is-context"}">
+                <article class="deck-gallery-card archetype-deck-card is-match">
                   <button
                     class="deck-gallery-preview"
                     type="button"
@@ -269,7 +265,7 @@ function renderWeekSections(groups, archetypeName) {
                     </div>
 
                     <div class="deck-chip-row">
-                      ${statusChip}
+                      <span class="deck-chip deck-chip-current archetype-match-chip">${escapeHtml(match.name)} · ${match.copies}</span>
                       ${renderSupportingChips(stats, archetypeName)}
                     </div>
                   </div>
@@ -327,8 +323,7 @@ async function init() {
     `Every qualifying week is shown with all four decks kept together for context.`;
   archetypeSectionTitle.textContent = `${archetypeName} Deck Archive`;
   archetypeSectionNote.textContent =
-    `Highlighted decks actually used ${archetypeName}; muted decks are the other lists from that same week.`;
-
+    `Only decks that actually used ${archetypeName} are shown here.`;
   renderSnapshot(groups);
   renderWeekSections(groups, archetypeName);
 }
