@@ -9,27 +9,42 @@ BOT_TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 
 url = f"https://discord.com/api/v10/applications/{APPLICATION_ID}/guilds/{GUILD_ID}/commands"
 
-payload = {
-    "name": "deck",
-    "description": "Show a deck image",
-    "type": 1,
-    "options": [
-        {
-            "name": "player",
-            "description": "Player name",
-            "type": 3,
-            "required": True
-        },
-        {
-            "name": "week",
-            "description": "Week number",
-            "type": 4,
-            "required": True
-        }
-    ]
-}
+commands = [
+    {
+        "name": "deck",
+        "description": "Show a deck image",
+        "type": 1,
+        "options": [
+            {
+                "name": "player",
+                "description": "Player name",
+                "type": 3,
+                "required": True
+            },
+            {
+                "name": "week",
+                "description": "Week number",
+                "type": 4,
+                "required": True
+            }
+        ]
+    },
+    {
+        "name": "card",
+        "description": "Show a card image and binder quantities",
+        "type": 1,
+        "options": [
+            {
+                "name": "name",
+                "description": "Exact card name",
+                "type": 3,
+                "required": True
+            }
+        ]
+    }
+]
 
-data = json.dumps(payload).encode("utf-8")
+data = json.dumps(commands).encode("utf-8")
 
 req = urllib.request.Request(
     url,
@@ -39,7 +54,7 @@ req = urllib.request.Request(
         "Content-Type": "application/json",
         "User-Agent": "ThiccMagicianGirl/1.0"
     },
-    method="POST"
+    method="PUT"
 )
 
 try:

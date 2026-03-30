@@ -47,6 +47,36 @@ async function verifyDiscordRequest(request, publicKeyHex) {
   return { ok: isValid, bodyText };
 }
 
+function normalizeName(value) {
+  return safeText(value).toLowerCase();
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined) return null;
+  const trimmed = String(value).trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getCardImageUrl(row, origin) {
+  const directImage = safeText(row?.image);
+  if (directImage) {
+    return new URL(directImage, origin).toString();
+  }
+
+  const cardId = safeText(row?.cardid || row?.cardId || row?.id || row?.passcode);
+  if (cardId) {
+    return new URL(`/images/cards/${cardId}.jpg`, origin).toString();
+  }
+
+  return "";
+}
+
+function sumRowQuantities(rows) {
+  return rows.reduce((sum, row) => sum + (toNumber(row?.quantity) ?? 1), 0);
+}
+
 function safeText(value) {
   return value ? String(value).trim() : "";
 }
@@ -203,6 +233,104 @@ export default {
             }
           ],
           components
+        }
+      });
+    }
+
+    if (commandName === "card") {
+      const nameInput = getCommandOption(options, "name");
+      const query = safeText(nameInput);
+      const queryKey = normalizeName(query);
+
+      if (!queryKey) {
+        return Response.json({
+          type: 4,
+          data: {
+            content: "Please provide a card name."
+          }
+        });
+      }
+
+      const players = [
+        { key: "asapaska", label: "asapaska", path: "/data/generated/asapaska.json" },
+        { key: "retroid99", label: "Retroid99", path: "/data/generated/retroid99.json" },
+        { key: "mhkaixer", label: "MHKaixer", path: "/data/generated/mhkaixer.json" },
+        { key: "shiruba", label: "ShirubaMaebure", path: "/data/generated/shiruba.json" }
+      ];
+
+      const binderResponses = await Promise.all(
+        players.map((player) =>
+          env.ASSETS.fetch(new Request(new URL(player.path, url.origin).toString()))
+        )
+      );
+
+      const binderJsons = await Promise.all(
+        binderResponses.map(async (resp) => {
+          if (!resp.ok) return [];
+          try {
+            const data = await resp.json();
+            return Array.isArray(data) ? data : [];
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      const perPlayer = players.map((player, index) => {
+        const rows = binderJsons[index];
+
+        const exactMatches = rows.filter(
+          (row) => normalizeName(row?.name) === queryKey
+        );
+
+        const matches = exactMatches.length
+          ? exactMatches
+          : rows.filter((row) => normalizeName(row?.name).includes(queryKey));
+
+        const quantity = sumRowQuantities(matches);
+
+        return {
+          ...player,
+          matches,
+          quantity
+        };
+      });
+
+      const totalCopies = perPlayer.reduce((sum, entry) => sum + entry.quantity, 0);
+
+      const firstMatchedRow =
+        perPlayer.flatMap((entry) => entry.matches).find(Boolean) || null;
+
+      if (!firstMatchedRow) {
+        return Response.json({
+          type: 4,
+          data: {
+            content: `No binder entries found for "${query}".`
+          }
+        });
+      }
+
+      const cardName = safeText(firstMatchedRow.name) || query;
+      const imageUrl = getCardImageUrl(firstMatchedRow, url.origin);
+
+      const quantityLines = perPlayer
+        .map((entry) => `**${entry.label}:** ${entry.quantity}`)
+        .join("\n");
+
+      const embed = {
+        title: cardName,
+        description: `${quantityLines}\n\n**Total:** ${totalCopies}`,
+        color: 0xF1C40F
+      };
+
+      if (imageUrl) {
+        embed.image = { url: imageUrl };
+      }
+
+      return Response.json({
+        type: 4,
+        data: {
+          embeds: [embed]
         }
       });
     }
