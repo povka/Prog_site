@@ -47,175 +47,171 @@ async function verifyDiscordRequest(request, publicKeyHex) {
   return { ok: isValid, bodyText };
 }
 
+function safeText(value) {
+  return value ? String(value).trim() : "";
+}
+
+function normalizeAssetPath(value) {
+  return safeText(value)
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+function truncateLabel(value, max = 80) {
+  const text = safeText(value);
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
+function buildArchetypeUrl(origin, name) {
+  return new URL(
+    `/archetype.html?name=${encodeURIComponent(safeText(name))}`,
+    origin
+  ).toString();
+}
+
+function getCommandOption(options, name) {
+  return options.find((o) => o.name === name)?.value;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/discord/interactions") {
-      if (request.method !== "POST") {
-        return new Response("Method Not Allowed", { status: 405 });
+    if (url.pathname !== "/discord/interactions") {
+      return env.ASSETS.fetch(request);
+    }
+
+    if (request.method !== "POST") {
+      return new Response("Method Not Allowed", { status: 405 });
+    }
+
+    const verification = await verifyDiscordRequest(
+      request,
+      env.DISCORD_PUBLIC_KEY
+    );
+
+    if (!verification.ok) {
+      return new Response("Bad request signature.", { status: 401 });
+    }
+
+    let body;
+    try {
+      body = JSON.parse(verification.bodyText);
+    } catch {
+      return new Response("Bad Request", { status: 400 });
+    }
+
+    if (body.type === 1) {
+      return Response.json({ type: 1 });
+    }
+
+    const commandName = body.data?.name;
+    const options = body.data?.options ?? [];
+
+    if (commandName === "deck") {
+      const player = safeText(getCommandOption(options, "player")).toLowerCase();
+      const week = String(getCommandOption(options, "week") ?? "").trim();
+
+      const [indexResp, statsResp] = await Promise.all([
+        env.ASSETS.fetch(
+          new Request(new URL("/data/deck-index.json", url.origin).toString())
+        ),
+        env.ASSETS.fetch(
+          new Request(new URL("/data/generated/deck-stats.json", url.origin).toString())
+        )
+      ]);
+
+      if (!indexResp.ok) {
+        return Response.json({
+          type: 4,
+          data: {
+            content: "Deck index file is missing."
+          }
+        });
       }
 
-      const verification = await verifyDiscordRequest(
-        request,
-        env.DISCORD_PUBLIC_KEY
-      );
-
-      if (!verification.ok) {
-        return new Response("Bad request signature.", { status: 401 });
+      if (!statsResp.ok) {
+        return Response.json({
+          type: 4,
+          data: {
+            content: "Deck stats file is missing."
+          }
+        });
       }
 
-      let body;
-      try {
-        body = JSON.parse(verification.bodyText);
-      } catch {
-        return new Response("Bad Request", { status: 400 });
+      const deckIndex = await indexResp.json();
+      const deckStatsData = await statsResp.json();
+
+      const weekData = deckIndex?.weeks?.[week];
+      const playerData = weekData?.players?.[player];
+
+      if (!weekData || !playerData?.image) {
+        return Response.json({
+          type: 4,
+          data: {
+            content: `No deck image found for player "${player}" in week ${week}.`
+          }
+        });
       }
 
-      // Discord endpoint handshake
-      if (body.type === 1) {
-        return Response.json({ type: 1 });
-      }
+      const imageUrl = new URL(playerData.image, url.origin).toString();
+      const setName = weekData.setName || `Week ${week}`;
 
-        function safeText(value) {
-  return value ? String(value).trim() : "";
-}
+      const ydkPath = normalizeAssetPath(playerData.ydk);
+      const statsEntry = ydkPath ? deckStatsData?.byYdk?.[ydkPath] : null;
+      const topArchetypes = (
+        statsEntry?.topArchetypes ||
+        statsEntry?.archetypes ||
+        []
+      ).slice(0, 3);
 
-function normalizeAssetPath(value) {
-  return safeText(value)
-    .replace(/\\/g, "/")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
-}
-
-function truncateLabel(value, max = 80) {
-  const text = safeText(value);
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
-
-        function safeText(value) {
-  return value ? String(value).trim() : "";
-}
-
-function normalizeAssetPath(value) {
-  return safeText(value)
-    .replace(/\\/g, "/")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
-}
-
-function truncateLabel(value, max = 80) {
-  const text = safeText(value);
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
-
-        const commandName = body.data?.name;
-        const options = body.data?.options ?? [];
-
-        if (commandName === "deck") {
-        const playerInput = options.find(o => o.name === "player")?.value;
-        const weekInput = options.find(o => o.name === "week")?.value;
-
-        const player = String(playerInput || "").trim().toLowerCase();
-        const week = String(weekInput || "").trim();
-
-        const [indexResp, statsResp] = await Promise.all([
-            env.ASSETS.fetch(new Request(new URL("/data/deck-index.json", url.origin).toString())),
-            env.ASSETS.fetch(new Request(new URL("/data/generated/deck-stats.json", url.origin).toString()))
-        ]);
-
-        if (!indexResp.ok) {
-            return Response.json({
-            type: 4,
-            data: { content: "Deck index file is missing." }
-            });
-        }
-
-        if (!statsResp.ok) {
-            return Response.json({
-            type: 4,
-            data: { content: "Deck stats file is missing." }
-            });
-        }
-
-        const deckIndex = await indexResp.json();
-        const deckStatsData = await statsResp.json();
-
-        const weekData = deckIndex?.weeks?.[week];
-        const playerData = weekData?.players?.[player];
-
-        if (!weekData || !playerData?.image) {
-            return Response.json({
-            type: 4,
-            data: {
-                content: `No deck image found for player "${player}" in week ${week}.`
-            }
-            });
-        }
-
-        const imageUrl = new URL(playerData.image, url.origin).toString();
-        const setName = weekData.setName || `Week ${week}`;
-
-        const ydkPath = normalizeAssetPath(playerData.ydk);
-        const statsEntry = ydkPath ? deckStatsData?.byYdk?.[ydkPath] : null;
-
-        const topArchetypes = (
-            statsEntry?.topArchetypes ||
-            statsEntry?.archetypes ||
-            []
-        ).slice(0, 3);
-
-        const components = topArchetypes.length
-            ? [
-                {
-                type: 1,
-                components: topArchetypes.map((row) => {
-                    const archetypeName = safeText(row?.name) || "Unknown";
-                    const copies = row?.copies;
-                    const label = copies === undefined || copies === null
+      const components = topArchetypes.length
+        ? [
+            {
+              type: 1,
+              components: topArchetypes.map((row) => {
+                const archetypeName = safeText(row?.name) || "Unknown";
+                const copies = row?.copies;
+                const label =
+                  copies === undefined || copies === null
                     ? archetypeName
                     : `${archetypeName} · ${copies}`;
 
-                    return {
-                    type: 2,
-                    style: 5,
-                    label: truncateLabel(label, 80),
-                    url: new URL(
-                        `/archetype.html?name=${encodeURIComponent(archetypeName)}`,
-                        url.origin
-                    ).toString()
-                    };
-                })
-                }
-            ]
-            : [];
-
-        return Response.json({
-            type: 4,
-            data: {
-            embeds: [
-                {
-                title: `Deck - ${player} - Week ${week}`,
-                description: `Set: **${setName}**`,
-                color: 0xF1C40F,
-                image: {
-                    url: imageUrl
-                }
-                }
-            ],
-            components
+                return {
+                  type: 2,
+                  style: 5,
+                  label: truncateLabel(label, 80),
+                  url: buildArchetypeUrl(url.origin, archetypeName)
+                };
+              })
             }
-        });
-        }
+          ]
+        : [];
 
-        return Response.json({
+      return Response.json({
         type: 4,
         data: {
-            content: "Unknown command."
+          embeds: [
+            {
+              title: `Deck - ${player} - Week ${week}`,
+              description: `Set: **${setName}**`,
+              color: 0xF1C40F,
+              image: {
+                url: imageUrl
+              }
+            }
+          ],
+          components
         }
-        });
+      });
     }
 
-    return env.ASSETS.fetch(request);
+    return Response.json({
+      type: 4,
+      data: {
+        content: "Unknown command."
+      }
+    });
   }
 };
