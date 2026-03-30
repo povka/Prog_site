@@ -77,13 +77,38 @@ export default {
         return Response.json({ type: 1 });
       }
 
-      // Temporary placeholder until /deck is added
-      return Response.json({
+      const commandName = body.data?.name;
+        const options = body.data?.options ?? [];
+
+        if (commandName === "deck") {
+        const player = options.find(o => o.name === "player")?.value;
+        const week = options.find(o => o.name === "week")?.value;
+
+        // Replace this with one real public deck image URL from your site
+        const TEST_DECK_IMAGE_URL = "https://asapaskaprog.asapaska3.workers.dev/images/test-deck.png";
+
+        return Response.json({
+            type: 4,
+            data: {
+            embeds: [
+                {
+                title: `Deck - ${player} - Week ${week}`,
+                color: 0xF1C40F,
+                image: {
+                    url: TEST_DECK_IMAGE_URL
+                }
+                }
+            ]
+            }
+        });
+        }
+
+        return Response.json({
         type: 4,
         data: {
-          content: "Thicc Magician Girl is verified and listening."
+            content: "Unknown command."
         }
-      });
+        });
     }
 
     return env.ASSETS.fetch(request);
