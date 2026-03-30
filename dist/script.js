@@ -533,7 +533,7 @@ function renderDecks(weekKey) {
   const trackedDecks = week.decks.filter((deck) => !!getDeckStatsForDeck(deck)).length;
 
   deckResultsLabel.textContent =
-    `Showing decks for: ${week.label} • ${trackedDecks}/${week.decks.length} .ydk files linked`;
+    ``;
 
   deckDisplay.innerHTML = "";
   renderDeckPlayerStats(weekKey);
