@@ -545,21 +545,10 @@ function renderDecks(weekKey) {
 
     const ydkPath = normalizeAssetPath(deck.ydk);
 
-    const countBadge = deckStats
-      ? `
-        <div class="deck-card-counts">
-          <span>M ${deckStats.mainCount}</span>
-          <span>E ${deckStats.extraCount}</span>
-          <span>S ${deckStats.sideCount}</span>
-        </div>
-      `
-      : "";
-
     card.innerHTML = `
       <button class="deck-gallery-preview" type="button" aria-label="Open ${safeText(deck.title)} image">
         <div class="deck-gallery-image-wrap">
           <img src="${deck.image}" alt="${deck.title}" class="deck-gallery-image" />
-          ${countBadge}
         </div>
       </button>
 
@@ -574,17 +563,16 @@ function renderDecks(weekKey) {
         </div>
       </div>
 
-      <div class="deck-gallery-footer">
-        <button type="button" class="deck-action-button deck-open-button">Open image</button>
-        ${ydkPath ? `<a href="${ydkPath}" class="deck-action-button deck-download-button" download>Download .ydk</a>` : ""}
-      </div>
+      ${ydkPath ? `
+        <div class="deck-gallery-footer">
+          <a href="${ydkPath}" class="deck-action-button deck-download-button" download>Download .ydk</a>
+        </div>
+      ` : ""}
     `;
 
-    const openButtons = card.querySelectorAll(".deck-gallery-preview, .deck-open-button");
-    openButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        openModal(deck.image, deck.title);
-      });
+    const previewButton = card.querySelector(".deck-gallery-preview");
+    previewButton?.addEventListener("click", () => {
+      openModal(deck.image, deck.title);
     });
 
     deckDisplay.appendChild(card);

@@ -7,9 +7,6 @@
       "title": "Week 1 • Troid won purely off skill Deck",
       "ydk": "data/decks/week1-retroid.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 0,
-      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -42,9 +39,6 @@
       "title": "Week 1 • MHKaixer Deck",
       "ydk": "data/decks/week1-kaixer.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 3,
-      "sideCount": 0,
       "resolvedCards": 43,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -77,9 +71,6 @@
       "title": "Week 1 • asapaska Deck",
       "ydk": "data/decks/week1-asa.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 12,
-      "sideCount": 0,
       "resolvedCards": 52,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -111,7 +102,7 @@
       "player": "ShirubaMaebure",
       "title": "Week 1 • ShirubaMaebure Deck",
       "ydk": "data/decks/week1-shiruba.ydk",
-      "missing": false,
+      "missing": true,
       "mainCount": 0,
       "extraCount": 0,
       "sideCount": 0,
@@ -126,9 +117,6 @@
       "title": "Week 2 • Retroid99 Deck",
       "ydk": "data/decks/week2-retroid.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 0,
-      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -146,9 +134,6 @@
       "title": "Week 2 • MHKaixer Deck",
       "ydk": "data/decks/week2-kaixer.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 0,
-      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -181,9 +166,6 @@
       "title": "Week 2 • asapaska Deck",
       "ydk": "data/decks/week2-asa.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 15,
-      "sideCount": 0,
       "resolvedCards": 55,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -211,9 +193,6 @@
       "title": "Week 2 • ShirubaMaebure Deck",
       "ydk": "data/decks/week2-shiruba.ydk",
       "missing": false,
-      "mainCount": 41,
-      "extraCount": 3,
-      "sideCount": 0,
       "resolvedCards": 44,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -241,9 +220,6 @@
       "title": "Week 3 • Retroid99 Deck",
       "ydk": "data/decks/week3-retroid.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 0,
-      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -266,9 +242,6 @@
       "title": "Week 3 • MHKaixer Deck",
       "ydk": "data/decks/week3-kaixer.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 0,
-      "sideCount": 0,
       "resolvedCards": 40,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -301,9 +274,6 @@
       "title": "Week 3 • asapaska Deck",
       "ydk": "data/decks/week3-asa.ydk",
       "missing": false,
-      "mainCount": 40,
-      "extraCount": 15,
-      "sideCount": 0,
       "resolvedCards": 55,
       "unresolvedCards": 0,
       "topArchetypes": [
@@ -325,7 +295,7 @@
       "player": "ShirubaMaebure",
       "title": "Week 3 • ShirubaMaebure Deck",
       "ydk": "data/decks/week3-shiruba.ydk",
-      "missing": false,
+      "missing": true,
       "mainCount": 0,
       "extraCount": 0,
       "sideCount": 0,
@@ -450,7 +420,7 @@
     },
     "shirubamaebure": {
       "playerDisplayName": "ShirubaMaebure",
-      "trackedDeckCount": 3,
+      "trackedDeckCount": 1,
       "topArchetypes": [
         {
           "name": "Thunder Dragon",
