@@ -62,6 +62,13 @@ const binderFiltersPanel = document.getElementById("binderFiltersPanel");
 const toggleFiltersButton = document.getElementById("toggleFiltersButton");
 let binderFiltersCollapsed = true;
 
+let activeBanlistFile = "Pharaoh's Servant.conf";
+
+const BANLISTS_BASE_PATH = "data/Banlists";
+const BANLIST_MANIFEST_PATH = `${BANLISTS_BASE_PATH}/banlists.json`;
+const FALLBACK_BANLIST_FILE = "Pharaoh's Servant.conf";
+const binderBanlist = document.getElementById("binderBanlist");
+
 function safeText(value) {
   return value ? String(value).trim() : "";
 }
@@ -82,6 +89,59 @@ function normalizeCardId(value) {
   if (!digitsOnly) return "";
 
   return String(Number(digitsOnly));
+}
+
+function formatBanlistLabel(fileName) {
+  return safeText(fileName).replace(/\.conf$/i, "");
+}
+
+function setBanlistOptions(files, defaultFile) {
+  const normalizedFiles = Array.from(
+    new Set(
+      (files || [])
+        .map((file) => safeText(file))
+        .filter((file) => file && /\.conf$/i.test(file))
+    )
+  ).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+
+  if (!normalizedFiles.length) {
+    normalizedFiles.push(FALLBACK_BANLIST_FILE);
+  }
+
+  const selectedFile = normalizedFiles.includes(defaultFile)
+    ? defaultFile
+    : normalizedFiles.includes(FALLBACK_BANLIST_FILE)
+      ? FALLBACK_BANLIST_FILE
+      : normalizedFiles[0];
+
+  binderBanlist.innerHTML = "";
+
+  normalizedFiles.forEach((fileName) => {
+    const option = document.createElement("option");
+    option.value = fileName;
+    option.textContent = formatBanlistLabel(fileName);
+    binderBanlist.appendChild(option);
+  });
+
+  binderBanlist.value = selectedFile;
+  activeBanlistFile = selectedFile;
+}
+
+async function loadBanlistManifest() {
+  try {
+    const res = await fetch(BANLIST_MANIFEST_PATH, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to load banlist manifest");
+
+    const manifest = await res.json();
+    const files = Array.isArray(manifest.files) ? manifest.files : [];
+    const defaultFile = safeText(manifest.default) || FALLBACK_BANLIST_FILE;
+
+    setBanlistOptions(files, defaultFile);
+  } catch {
+    setBanlistOptions([FALLBACK_BANLIST_FILE], FALLBACK_BANLIST_FILE);
+  }
 }
 
 function parseBanlistConfig(content) {
@@ -139,9 +199,16 @@ function parseBanlistConfig(content) {
   return map;
 }
 
-async function loadBanlistData() {
+async function loadBanlistData(fileName = binderBanlist.value || activeBanlistFile || FALLBACK_BANLIST_FILE) {
+  const selectedFile = safeText(fileName) || FALLBACK_BANLIST_FILE;
+  activeBanlistFile = selectedFile;
+
   try {
-    const res = await fetch("data/Banlist.conf");
+    const res = await fetch(
+      `${BANLISTS_BASE_PATH}/${encodeURIComponent(selectedFile)}`,
+      { cache: "no-store" }
+    );
+
     if (!res.ok) throw new Error("Failed to load banlist");
 
     const text = await res.text();
@@ -970,17 +1037,26 @@ toggleFiltersButton.addEventListener("click", () => {
   setBinderFiltersCollapsed(!binderFiltersCollapsed);
 });
 
+binderBanlist.addEventListener("change", async () => {
+  await loadBanlistData(binderBanlist.value);
+  renderBinder(currentBinderRows);
+});
+
 async function init() {
   await Promise.all([
     loadSiteData(),
     loadDeckData(),
-    loadBanlistData()
+    loadBanlistManifest()
   ]);
+
+  await loadBanlistData(binderBanlist.value);
 
   syncFilterVisibility();
   updateSortDirectionButton();
   updateFiltersToggleButton();
   loadBinder(binderPlayer.value);
 }
+
+init();
 
 init();

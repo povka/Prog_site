@@ -1094,6 +1094,7 @@ p{color:var(--ink-soft)}
 }
 
 #binderPlayer,
+#binderBanlist,
 #binderSort{
   width:100%;
 }
@@ -1104,15 +1105,20 @@ p{color:var(--ink-soft)}
 
 .binder-controls-sort-top-row{
   display:grid;
-  grid-template-columns:minmax(0, 2fr) minmax(240px, 0.95fr);
+  grid-template-columns:1fr;
   gap:12px;
   align-items:stretch;
 }
 
+.binder-controls-sort-spacer{
+  display:none;
+}
+
 .binder-controls-sort-box{
-  width:100%;
+  width:min(100%, 780px);
+  justify-self:end;
   display:grid;
-  grid-template-columns:minmax(0, 1fr) 52px auto;
+  grid-template-columns:minmax(0, 1.45fr) minmax(0, 1fr) 52px auto;
   gap:10px;
   align-items:stretch;
 }
