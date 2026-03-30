@@ -77,6 +77,22 @@ export default {
         return Response.json({ type: 1 });
       }
 
+        function safeText(value) {
+  return value ? String(value).trim() : "";
+}
+
+function normalizeAssetPath(value) {
+  return safeText(value)
+    .replace(/\\/g, "/")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+function truncateLabel(value, max = 80) {
+  const text = safeText(value);
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
         const commandName = body.data?.name;
         const options = body.data?.options ?? [];
 
@@ -87,19 +103,28 @@ export default {
         const player = String(playerInput || "").trim().toLowerCase();
         const week = String(weekInput || "").trim();
 
-        const indexUrl = new URL("/data/deck-index.json", url.origin);
-        const indexResp = await env.ASSETS.fetch(new Request(indexUrl.toString()));
+        const [indexResp, statsResp] = await Promise.all([
+            env.ASSETS.fetch(new Request(new URL("/data/deck-index.json", url.origin).toString())),
+            env.ASSETS.fetch(new Request(new URL("/data/generated/deck-stats.json", url.origin).toString()))
+        ]);
 
         if (!indexResp.ok) {
             return Response.json({
             type: 4,
-            data: {
-                content: "Deck index file is missing."
-            }
+            data: { content: "Deck index file is missing." }
+            });
+        }
+
+        if (!statsResp.ok) {
+            return Response.json({
+            type: 4,
+            data: { content: "Deck stats file is missing." }
             });
         }
 
         const deckIndex = await indexResp.json();
+        const deckStatsData = await statsResp.json();
+
         const weekData = deckIndex?.weeks?.[week];
         const playerData = weekData?.players?.[player];
 
@@ -115,6 +140,40 @@ export default {
         const imageUrl = new URL(playerData.image, url.origin).toString();
         const setName = weekData.setName || `Week ${week}`;
 
+        const ydkPath = normalizeAssetPath(playerData.ydk);
+        const statsEntry = ydkPath ? deckStatsData?.byYdk?.[ydkPath] : null;
+
+        const topArchetypes = (
+            statsEntry?.topArchetypes ||
+            statsEntry?.archetypes ||
+            []
+        ).slice(0, 3);
+
+        const components = topArchetypes.length
+            ? [
+                {
+                type: 1,
+                components: topArchetypes.map((row) => {
+                    const archetypeName = safeText(row?.name) || "Unknown";
+                    const copies = row?.copies;
+                    const label = copies === undefined || copies === null
+                    ? archetypeName
+                    : `${archetypeName} · ${copies}`;
+
+                    return {
+                    type: 2,
+                    style: 5,
+                    label: truncateLabel(label, 80),
+                    url: new URL(
+                        `/archetype.html?name=${encodeURIComponent(archetypeName)}`,
+                        url.origin
+                    ).toString()
+                    };
+                })
+                }
+            ]
+            : [];
+
         return Response.json({
             type: 4,
             data: {
@@ -127,10 +186,18 @@ export default {
                     url: imageUrl
                 }
                 }
-            ]
+            ],
+            components
             }
         });
         }
+
+        return Response.json({
+        type: 4,
+        data: {
+            content: "Unknown command."
+        }
+        });
     }
 
     return env.ASSETS.fetch(request);

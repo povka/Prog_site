@@ -4,16 +4,20 @@
       "setName": "Legend of Blue Eyes White Dragon",
       "players": {
         "asapaska": {
-          "image": "/images/decks/week1-asa.jpg"
+          "image": "/images/decks/week1-asa.jpg",
+          "ydk": "data/ydk/week1-asa.ydk"
         },
         "mhkaixer": {
-          "image": "/images/decks/week1-kaixer.jpg"
+          "image": "/images/decks/week1-kaixer.jpg",
+          "ydk": "data/ydk/week1-kaixer.ydk"
         },
         "retroid99": {
-          "image": "/images/decks/week1-retroid.jpg"
+          "image": "/images/decks/week1-retroid.jpg",
+          "ydk": "data/ydk/week1-retroid.ydk"
         },
         "shiruba": {
-          "image": "/images/decks/week1-shiruba.jpg"
+          "image": "/images/decks/week1-shiruba.jpg",
+          "ydk": "data/ydk/week1-shiruba.ydk"
         }
       }
     },
@@ -21,16 +25,20 @@
       "setName": "Metal Raiders",
       "players": {
         "asapaska": {
-          "image": "/images/decks/week2-asa.jpg"
+          "image": "/images/decks/week2-asa.jpg",
+          "ydk": "data/ydk/week2-asa.ydk"
         },
         "mhkaixer": {
-          "image": "/images/decks/week2-kaixer.jpg"
+          "image": "/images/decks/week2-kaixer.jpg",
+          "ydk": "data/ydk/week2-kaixer.ydk"
         },
         "retroid99": {
-          "image": "/images/decks/week2-retroid.jpg"
+          "image": "/images/decks/week2-retroid.jpg",
+          "ydk": "data/ydk/week2-retroid.ydk"
         },
         "shiruba": {
-          "image": "/images/decks/week2-shiruba.jpg"
+          "image": "/images/decks/week2-shiruba.jpg",
+          "ydk": "data/ydk/week2-shiruba.ydk"
         }
       }
     },
@@ -38,16 +46,20 @@
       "setName": "Spell Ruler",
       "players": {
         "asapaska": {
-          "image": "/images/decks/week3-asa.jpg"
+          "image": "/images/decks/week3-asa.jpg",
+          "ydk": "data/ydk/week3-asa.ydk"
         },
         "mhkaixer": {
-          "image": "/images/decks/week3-kaixer.jpg"
+          "image": "/images/decks/week3-kaixer.jpg",
+          "ydk": "data/ydk/week3-kaixer.ydk"
         },
         "retroid99": {
-          "image": "/images/decks/week3-retroid.jpg"
+          "image": "/images/decks/week3-retroid.jpg",
+          "ydk": "data/ydk/week3-retroid.ydk"
         },
         "shiruba": {
-          "image": "/images/decks/week3-shiruba.jpg"
+          "image": "/images/decks/week3-shiruba.jpg",
+          "ydk": "data/ydk/week3-shiruba.ydk"
         }
       }
     }
