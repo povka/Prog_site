@@ -483,8 +483,12 @@ async function loadDeckData() {
     .map(([key, week]) => `<option value="${key}">${week.label}</option>`)
     .join("");
 
-  const firstKey = Object.keys(deckData)[0];
-  if (firstKey) renderDecks(firstKey);
+  const defaultWeekKey =
+    Object.keys(deckData).find((key) => key.toLowerCase() === "week3") ||
+    Object.keys(deckData).find((key) => safeText(deckData[key]?.label).toLowerCase().includes("week 3")) ||
+    Object.keys(deckData)[0];
+
+  if (defaultWeekKey) renderDecks(defaultWeekKey);
 }
 
 function renderDeckPlayerStats(selectedWeekKey) {
