@@ -479,6 +479,53 @@
           "uniqueCards": 1
         }
       ]
+    },
+    "data/decks/week3-shiruba.ydk": {
+      "weekKey": "week3",
+      "weekLabel": "Week 3 • Spell Ruler",
+      "player": "ShirubaMaebure",
+      "title": "Week 3 • ShirubaMaebure Deck",
+      "ydk": "data/decks/week3-shiruba.ydk",
+      "missing": false,
+      "mainCount": 41,
+      "extraCount": 3,
+      "sideCount": 8,
+      "resolvedCards": 44,
+      "unresolvedCards": 0,
+      "archetypes": [
+        {
+          "name": "Thunder Dragon",
+          "copies": 4,
+          "uniqueCards": 2
+        },
+        {
+          "name": "Gaia The Fierce Knight",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Kuriboh",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ],
+      "topArchetypes": [
+        {
+          "name": "Thunder Dragon",
+          "copies": 4,
+          "uniqueCards": 2
+        },
+        {
+          "name": "Gaia The Fierce Knight",
+          "copies": 1,
+          "uniqueCards": 1
+        },
+        {
+          "name": "Kuriboh",
+          "copies": 1,
+          "uniqueCards": 1
+        }
+      ]
     }
   },
   "playerStats": {
@@ -597,22 +644,22 @@
     },
     "shirubamaebure": {
       "playerDisplayName": "ShirubaMaebure",
-      "trackedDeckCount": 1,
+      "trackedDeckCount": 2,
       "topArchetypes": [
         {
           "name": "Thunder Dragon",
-          "decks": 1,
-          "copies": 4
+          "decks": 2,
+          "copies": 8
         },
         {
           "name": "Gaia The Fierce Knight",
-          "decks": 1,
-          "copies": 1
+          "decks": 2,
+          "copies": 2
         },
         {
           "name": "Kuriboh",
-          "decks": 1,
-          "copies": 1
+          "decks": 2,
+          "copies": 2
         }
       ]
     }
