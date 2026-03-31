@@ -26,7 +26,7 @@
       { "player": "Retroid99", "image": "images/decks/week3-retroid.jpg", "title": "Week 3 • Retroid99 Deck", "ydk": "data/decks/week3-retroid.ydk"},
       { "player": "MHKaixer", "image": "images/decks/week3-kaixer.jpg", "title": "Week 3 • MHKaixer Deck", "ydk": "data/decks/week3-kaixer.ydk" },
       { "player": "asapaska", "image": "images/decks/week3-asa.jpg", "title": "Week 3 • asapaska Deck", "ydk": "data/decks/week3-asa.ydk"},
-      { "player": "ShirubaMaebure", "image": "images/decks/week3-shiruba.jpg?v=2", "title": "Week 3 • ShirubaMaebure Deck", "ydk": "data/decks/week3-shiruba.ydk" }
+      { "player": "ShirubaMaebure", "image": "images/decks/week3-shiruba.jpg?v=3", "title": "Week 3 • ShirubaMaebure Deck", "ydk": "data/decks/week3-shiruba.ydk" }
     ]
   }
 }
