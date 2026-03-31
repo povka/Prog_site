@@ -34,7 +34,7 @@
         },
         "retroid99": {
           "image": "/images/decks/week2-retroid.jpg",
-          "ydk": "data/ydecksdk/week2-retroid.ydk"
+          "ydk": "data/decks/week2-retroid.ydk"
         },
         "shiruba": {
           "image": "/images/decks/week2-shiruba.jpg",
