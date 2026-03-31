@@ -651,9 +651,50 @@ function getHighLevelType(row) {
   return "";
 }
 
-function getCardImage(row) {
-  if (safeText(row.image)) return safeText(row.image);
-  if (safeText(row.cardid)) return `images/cards/${safeText(row.cardid)}.jpg`;
+function getCardImageId(row) {
+  return safeText(row.cardid || row.cardId || row.id || row.passcode);
+}
+
+function swapCardImageFolder(path, folderName) {
+  const text = safeText(path);
+  if (!text) return "";
+
+  if (text.includes("/images/cards_small/")) {
+    return text.replace("/images/cards_small/", `/images/${folderName}/`);
+  }
+
+  if (text.includes("/images/cards/")) {
+    return text.replace("/images/cards/", `/images/${folderName}/`);
+  }
+
+  return text;
+}
+
+function getBinderPreviewImage(row) {
+  const directImage = safeText(row.image);
+  if (directImage) {
+    return swapCardImageFolder(directImage, "cards_small");
+  }
+
+  const cardId = getCardImageId(row);
+  if (cardId) {
+    return `images/cards_small/${cardId}.jpg`;
+  }
+
+  return "";
+}
+
+function getBinderModalImage(row) {
+  const directImage = safeText(row.image);
+  if (directImage) {
+    return swapCardImageFolder(directImage, "cards");
+  }
+
+  const cardId = getCardImageId(row);
+  if (cardId) {
+    return `images/cards/${cardId}.jpg`;
+  }
+
   return "";
 }
 
@@ -1089,7 +1130,8 @@ function renderBinder(rows) {
   }
 
   filtered.forEach((row) => {
-    const imageUrl = getCardImage(row);
+    const previewImageUrl = getBinderPreviewImage(row);
+    const modalImageUrl = getBinderModalImage(row);
     const banlistIcon = getBanlistIconForRow(row);
     const card = document.createElement("button");
     card.className = "binder-card";
@@ -1098,8 +1140,8 @@ function renderBinder(rows) {
     card.innerHTML = `
       <div class="binder-image-wrap">
         ${
-          imageUrl
-            ? `<img src="${imageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" />`
+          previewImageUrl
+            ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" />`
             : `<div class="binder-no-image">No Image</div>`
         }
 
@@ -1126,9 +1168,9 @@ function renderBinder(rows) {
       </div>
     `;
 
-    if (imageUrl) {
+    if (modalImageUrl) {
       card.addEventListener("click", () => {
-        openModal(imageUrl, safeText(row.name) || "Card Image", {
+        openModal(modalImageUrl, safeText(row.name) || "Card Image", {
           banlistIcon,
           banlistLabel: getBanlistLabelForRow(row)
         });
