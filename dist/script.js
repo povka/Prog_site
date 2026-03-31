@@ -667,6 +667,14 @@ function swapCardImageFolder(path, folderName) {
     return text.replace("/images/cards/", `/images/${folderName}/`);
   }
 
+  if (text.includes("images/cards_small/")) {
+    return text.replace("images/cards_small/", `images/${folderName}/`);
+  }
+
+  if (text.includes("images/cards/")) {
+    return text.replace("images/cards/", `images/${folderName}/`);
+  }
+
   return text;
 }
 
