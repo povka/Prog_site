@@ -36,11 +36,11 @@ PLAYER_SOURCES = {
         "user_env": "YGOPROG_USER_MHKAIXER",
         "pass_env": "YGOPROG_PASS_MHKAIXER",
     },
-    # "shiruba": {
-    #     "binder_id": "69b71f7fc8cc2ae73f72e5c1",
-    #     "user_env": "YGOPROG_USER_SHIRUBA",
-    #     "pass_env": "YGOPROG_PASS_SHIRUBA",
-    # },
+    "shiruba": {
+        "binder_id": "69b71f7fc8cc2ae73f72e5c1",
+        "user_env": "YGOPROG_USER_SHIRUBA",
+        "pass_env": "YGOPROG_PASS_SHIRUBA",
+    },
 }
 
 JWT_RE = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
