@@ -74,6 +74,10 @@ function getCommandOption(options, name) {
   return options.find((o) => o.name === name)?.value;
 }
 
+function getFocusedOption(options = []) {
+  return options.find((o) => o.focused) || null;
+}
+
 function normalizeName(value) {
   return safeText(value).toLowerCase();
 }
@@ -116,20 +120,127 @@ function r2ObjectToResponse(object) {
   });
 }
 
+function playerDisplayName(key) {
+  const labels = {
+    asapaska: "asapaska",
+    mhkaixer: "MHKaixer",
+    retroid99: "Retroid99",
+    shiruba: "ShirubaMaebure"
+  };
+
+  return labels[key] || key;
+}
+
+function filterAutocompleteChoices(choices, query, max = 25) {
+  const q = safeText(query).toLowerCase();
+
+  const filtered = q
+    ? choices.filter((choice) => safeText(choice.name).toLowerCase().includes(q))
+    : choices;
+
+  return filtered.slice(0, max);
+}
+
+function getWeekEntryBySetInput(deckIndex, setInput) {
+  const weeks = deckIndex?.weeks || {};
+  const normalizedInput = normalizeName(setInput);
+
+  if (!normalizedInput) {
+    return { weekKey: null, weekData: null };
+  }
+
+  for (const [weekKey, weekData] of Object.entries(weeks)) {
+    if (normalizeName(weekData?.setName) === normalizedInput) {
+      return { weekKey, weekData };
+    }
+  }
+
+  if (weeks[setInput]) {
+    return { weekKey: setInput, weekData: weeks[setInput] };
+  }
+
+  const strippedWeek = normalizedInput.replace(/^week\s+/, "");
+  if (weeks[strippedWeek]) {
+    return { weekKey: strippedWeek, weekData: weeks[strippedWeek] };
+  }
+
+  return { weekKey: null, weekData: null };
+}
+
+function buildDeckAutocompleteChoices(deckIndex, options) {
+  const focused = getFocusedOption(options);
+  if (!focused) return [];
+
+  const weeks = deckIndex?.weeks || {};
+  const selectedSet = safeText(getCommandOption(options, "set"));
+  const selectedPlayer = safeText(getCommandOption(options, "player")).toLowerCase();
+  const focusedValue = focused?.value;
+
+  if (focused.name === "set") {
+    const choices = Object.entries(weeks)
+      .filter(([, weekData]) => {
+        if (!selectedPlayer) return true;
+        return !!weekData?.players?.[selectedPlayer];
+      })
+      .sort((a, b) => Number(b[0]) - Number(a[0]))
+      .map(([, weekData]) => {
+        const setName = safeText(weekData?.setName) || "Unknown set";
+        return {
+          name: truncateLabel(setName, 100),
+          value: setName
+        };
+      });
+
+    return filterAutocompleteChoices(choices, focusedValue);
+  }
+
+  if (focused.name === "player") {
+    let playerKeys = [];
+
+    if (selectedSet) {
+      const { weekData } = getWeekEntryBySetInput(deckIndex, selectedSet);
+      if (weekData?.players) {
+        playerKeys = Object.keys(weekData.players);
+      }
+    } else {
+      const unique = new Set();
+
+      for (const weekData of Object.values(weeks)) {
+        for (const key of Object.keys(weekData?.players || {})) {
+          unique.add(key);
+        }
+      }
+
+      playerKeys = [...unique];
+    }
+
+    const choices = playerKeys
+      .sort((a, b) => playerDisplayName(a).localeCompare(playerDisplayName(b)))
+      .map((key) => ({
+        name: truncateLabel(playerDisplayName(key), 100),
+        value: key
+      }));
+
+    return filterAutocompleteChoices(choices, focusedValue);
+  }
+
+  return [];
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/images/")) {
-    const key = url.pathname.replace(/^\/+/, "");
-    const object = await env.SITE_IMAGES.get(key);
+      const key = url.pathname.replace(/^\/+/, "");
+      const object = await env.SITE_IMAGES.get(key);
 
-    if (object) {
-      return r2ObjectToResponse(object);
+      if (object) {
+        return r2ObjectToResponse(object);
+      }
+
+      return env.ASSETS.fetch(request);
     }
-
-    return env.ASSETS.fetch(request);
-  }
 
     if (url.pathname !== "/discord/interactions") {
       return env.ASSETS.fetch(request);
@@ -163,9 +274,39 @@ export default {
     const commandName = body.data?.name;
     const options = body.data?.options ?? [];
 
+    // Discord autocomplete interaction
+    if (body.type === 4 && commandName === "deck") {
+      const indexResp = await env.ASSETS.fetch(
+        new Request(new URL("/data/deck-index.json", url.origin).toString())
+      );
+
+      if (!indexResp.ok) {
+        return Response.json({
+          type: 8,
+          data: {
+            choices: []
+          }
+        });
+      }
+
+      let deckIndex = {};
+      try {
+        deckIndex = await indexResp.json();
+      } catch {
+        deckIndex = {};
+      }
+
+      return Response.json({
+        type: 8,
+        data: {
+          choices: buildDeckAutocompleteChoices(deckIndex, options)
+        }
+      });
+    }
+
     if (commandName === "deck") {
       const player = safeText(getCommandOption(options, "player")).toLowerCase();
-      const week = String(getCommandOption(options, "week") ?? "").trim();
+      const setInput = safeText(getCommandOption(options, "set"));
 
       const [indexResp, statsResp] = await Promise.all([
         env.ASSETS.fetch(
@@ -197,20 +338,20 @@ export default {
       const deckIndex = await indexResp.json();
       const deckStatsData = await statsResp.json();
 
-      const weekData = deckIndex?.weeks?.[week];
+      const { weekKey, weekData } = getWeekEntryBySetInput(deckIndex, setInput);
       const playerData = weekData?.players?.[player];
 
       if (!weekData || !playerData?.image) {
         return Response.json({
           type: 4,
           data: {
-            content: `No deck image found for player "${player}" in week ${week}.`
+            content: `No deck image found for player "${player}" in set "${setInput}".`
           }
         });
       }
 
       const imageUrl = new URL(playerData.image, url.origin).toString();
-      const setName = weekData.setName || `Week ${week}`;
+      const setName = safeText(weekData.setName) || safeText(setInput) || `Week ${weekKey}`;
 
       const ydkPath = normalizeAssetPath(playerData.ydk);
       const statsEntry = ydkPath ? deckStatsData?.byYdk?.[ydkPath] : null;
@@ -248,8 +389,8 @@ export default {
         data: {
           embeds: [
             {
-              title: `Deck - ${player} - Week ${week}`,
-              description: `Set: **${setName}**`,
+              title: `Deck - ${playerDisplayName(player)} - ${setName}`,
+              description: `Week: **${weekKey}**`,
               color: 0xF1C40F,
               image: {
                 url: imageUrl

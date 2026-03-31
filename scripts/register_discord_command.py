@@ -19,13 +19,15 @@ commands = [
                 "name": "player",
                 "description": "Player name",
                 "type": 3,
-                "required": True
+                "required": True,
+                "autocomplete": True
             },
             {
-                "name": "week",
-                "description": "Week number",
-                "type": 4,
-                "required": True
+                "name": "set",
+                "description": "Set name",
+                "type": 3,
+                "required": True,
+                "autocomplete": True
             }
         ]
     },
