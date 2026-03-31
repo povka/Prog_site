@@ -1679,3 +1679,25 @@ p{color:var(--ink-soft)}
     grid-template-columns:1fr;
   }
 }
+/* MODAL BANLIST BADGE SIZE OVERRIDE */
+.modal-banlist-badge{
+  position:absolute;
+  top:14px;
+  left:14px;
+  width:84px;
+  height:84px;
+  z-index:3;
+  pointer-events:none;
+  transform:translate(-18%, -18%);
+  filter:drop-shadow(0 10px 20px rgba(0, 0, 0, 0.42));
+}
+
+@media (max-width: 720px){
+  .modal-banlist-badge{
+    top:10px;
+    left:10px;
+    width:64px;
+    height:64px;
+    transform:translate(-12%, -12%);
+  }
+}
