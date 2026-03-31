@@ -227,6 +227,103 @@ function buildDeckAutocompleteChoices(deckIndex, options) {
   return [];
 }
 
+function extractCardNames(cardIndex) {
+  const names = new Set();
+
+  function addName(value) {
+    const text = safeText(value);
+    if (text) {
+      names.add(text);
+    }
+  }
+
+  function absorbEntries(entries) {
+    if (!Array.isArray(entries)) return;
+
+    for (const entry of entries) {
+      if (typeof entry === "string") {
+        addName(entry);
+        continue;
+      }
+
+      if (entry && typeof entry === "object") {
+        addName(entry.name);
+        addName(entry.cardName);
+        addName(entry.label);
+        addName(entry.title);
+      }
+    }
+  }
+
+  if (Array.isArray(cardIndex)) {
+    absorbEntries(cardIndex);
+  } else if (cardIndex && typeof cardIndex === "object") {
+    absorbEntries(cardIndex.cards);
+    absorbEntries(cardIndex.items);
+    absorbEntries(cardIndex.entries);
+    absorbEntries(cardIndex.results);
+
+    for (const [key, value] of Object.entries(cardIndex)) {
+      if (typeof value === "string") {
+        addName(value);
+        continue;
+      }
+
+      if (value && typeof value === "object") {
+        const beforeSize = names.size;
+
+        addName(value.name);
+        addName(value.cardName);
+        addName(value.label);
+        addName(value.title);
+
+        if (names.size === beforeSize && key && isNaN(Number(key))) {
+          addName(key);
+        }
+      }
+    }
+  }
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
+function buildCardAutocompleteChoices(cardIndex, options) {
+  const focused = getFocusedOption(options);
+  if (!focused || focused.name !== "name") {
+    return [];
+  }
+
+  const query = safeText(focused.value).toLowerCase();
+  const names = extractCardNames(cardIndex);
+
+  const ranked = names
+    .map((name) => {
+      const lower = name.toLowerCase();
+
+      let rank = 999;
+      if (!query) rank = 0;
+      else if (lower === query) rank = 0;
+      else if (lower.startsWith(query)) rank = 1;
+      else if (lower.includes(query)) rank = 2;
+
+      return { name, rank };
+    })
+    .filter((row) => row.rank !== 999)
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 25);
+
+  return ranked.map((row) => {
+    const value = truncateLabel(row.name, 100);
+    return {
+      name: value,
+      value
+    };
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -275,33 +372,64 @@ export default {
     const options = body.data?.options ?? [];
 
     // Discord autocomplete interaction
-    if (body.type === 4 && commandName === "deck") {
-      const indexResp = await env.ASSETS.fetch(
-        new Request(new URL("/data/deck-index.json", url.origin).toString())
-      );
+    if (body.type === 4) {
+      if (commandName === "deck") {
+        const indexResp = await env.ASSETS.fetch(
+          new Request(new URL("/data/deck-index.json", url.origin).toString())
+        );
 
-      if (!indexResp.ok) {
+        if (!indexResp.ok) {
+          return Response.json({
+            type: 8,
+            data: {
+              choices: []
+            }
+          });
+        }
+
+        let deckIndex = {};
+        try {
+          deckIndex = await indexResp.json();
+        } catch {
+          deckIndex = {};
+        }
+
         return Response.json({
           type: 8,
           data: {
-            choices: []
+            choices: buildDeckAutocompleteChoices(deckIndex, options)
           }
         });
       }
 
-      let deckIndex = {};
-      try {
-        deckIndex = await indexResp.json();
-      } catch {
-        deckIndex = {};
-      }
+      if (commandName === "card") {
+        const cardIndexResp = await env.ASSETS.fetch(
+          new Request(new URL("/data/generated/card-index.json", url.origin).toString())
+        );
 
-      return Response.json({
-        type: 8,
-        data: {
-          choices: buildDeckAutocompleteChoices(deckIndex, options)
+        if (!cardIndexResp.ok) {
+          return Response.json({
+            type: 8,
+            data: {
+              choices: []
+            }
+          });
         }
-      });
+
+        let cardIndex = {};
+        try {
+          cardIndex = await cardIndexResp.json();
+        } catch {
+          cardIndex = {};
+        }
+
+        return Response.json({
+          type: 8,
+          data: {
+            choices: buildCardAutocompleteChoices(cardIndex, options)
+          }
+        });
+      }
     }
 
     if (commandName === "deck") {

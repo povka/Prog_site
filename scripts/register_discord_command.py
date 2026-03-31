@@ -40,7 +40,8 @@ commands = [
                 "name": "name",
                 "description": "Exact card name",
                 "type": 3,
-                "required": True
+                "required": True,
+                "autocomplete": True
             }
         ]
     }
