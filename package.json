@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "wrangler": "^4.79.0"
   },
   "name": "prog_site",
   "version": "1.0.0",

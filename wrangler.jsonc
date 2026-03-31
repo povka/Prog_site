@@ -6,5 +6,12 @@
     "directory": "dist",
     "binding": "ASSETS",
     "run_worker_first": true
-  }
+  },
+  "r2_buckets": [
+    {
+      "binding": "SITE_IMAGES",
+      "bucket_name": "prog-site",
+      "remote": true
+    }
+  ]
 }

@@ -104,9 +104,32 @@ function sumRowQuantities(rows) {
   return rows.reduce((sum, row) => sum + (toNumber(row?.quantity) ?? 1), 0);
 }
 
+function r2ObjectToResponse(object) {
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  headers.set("cache-control", "public, max-age=31536000, immutable");
+
+  return new Response(object.body, {
+    status: 200,
+    headers
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/images/")) {
+    const key = url.pathname.replace(/^\/+/, "");
+    const object = await env.SITE_IMAGES.get(key);
+
+    if (object) {
+      return r2ObjectToResponse(object);
+    }
+
+    return env.ASSETS.fetch(request);
+  }
 
     if (url.pathname !== "/discord/interactions") {
       return env.ASSETS.fetch(request);
