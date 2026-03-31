@@ -58,7 +58,7 @@
           "ydk": "data/decks/week3-retroid.ydk"
         },
         "shiruba": {
-          "image": "/images/decks/week3-shiruba.jpg",
+          "image": "/images/decks/week3-shiruba.jpg?v=2",
           "ydk": "data/decks/week3-shiruba.ydk"
         }
       }
