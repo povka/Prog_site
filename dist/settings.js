@@ -11,12 +11,21 @@ let prefs = {};
 let searchText = "";
 let currentUser = null;
 
+const IMAGE_VERSION = "2";
 const playerTabs = document.getElementById("playerTabs");
 const searchInput = document.getElementById("searchInput");
 const statusText = document.getElementById("statusText");
 const cardList = document.getElementById("cardList");
 const loginButton = document.getElementById("loginButton");
 const logoutButton = document.getElementById("logoutButton");
+
+function withImageVersion(url) {
+  const text = safeText(url);
+  if (!text) return "";
+
+  const separator = text.includes("?") ? "&" : "?";
+  return `${text}${separator}v=${encodeURIComponent(IMAGE_VERSION)}`;
+}
 
 function safeText(value) {
   return value ? String(value).trim() : "";
@@ -273,7 +282,7 @@ function renderCards() {
 
       const img = document.createElement("img");
       img.className = "settings-art-image";
-      img.src = imageUrl;
+      img.src = withImageVersion(imageUrl);
       img.alt = `${entry?.name || cardId} - ${imageId}`;
 
       const meta = document.createElement("div");

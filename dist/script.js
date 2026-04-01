@@ -8,6 +8,7 @@ let artworkPrefs = {};
 let artworkPrefsPlayer = "";
 let artworkManifestByImageId = {};
 
+const IMAGE_VERSION = "2";
 const deckSearch = document.getElementById("deckSearch");
 const deckSelector = document.getElementById("deckSelector");
 const deckDisplay = document.getElementById("deckDisplay");
@@ -78,6 +79,14 @@ const binderBanlist = document.getElementById("binderBanlist");
 
 function safeText(value) {
   return value ? String(value).trim() : "";
+}
+
+function withImageVersion(url) {
+  const text = safeText(url);
+  if (!text) return "";
+
+  const separator = text.includes("?") ? "&" : "?";
+  return `${text}${separator}v=${encodeURIComponent(IMAGE_VERSION)}`;
 }
 
 function normalizeAssetPath(value) {
@@ -832,36 +841,44 @@ function swapCardImageFolder(path, folderName) {
 function getDefaultBinderPreviewImage(row) {
   const directImage = safeText(row.image);
   if (directImage) {
-    return swapCardImageFolder(directImage, "cards_small") || directImage;
+    return withImageVersion(
+      swapCardImageFolder(directImage, "cards_small") || directImage
+    );
   }
 
   const cardId = getCardImageId(row);
-  return cardId ? `/images/cards_small/${cardId}.jpg` : "";
+  return cardId ? withImageVersion(`/images/cards_small/${cardId}.jpg`) : "";
 }
 
 function getDefaultBinderModalImage(row) {
   const directImage = safeText(row.image);
   if (directImage) {
-    return swapCardImageFolder(directImage, "cards") || directImage;
+    return withImageVersion(
+      swapCardImageFolder(directImage, "cards") || directImage
+    );
   }
 
   const cardId = getCardImageId(row);
-  return cardId ? `/images/cards/${cardId}.jpg` : "";
+  return cardId ? withImageVersion(`/images/cards/${cardId}.jpg`) : "";
 }
 
 function getBinderPreviewImage(row) {
-  const preferredImage = getPreferredArtworkUrl(row, "cards_small");
+  const preferredImage = getPreferredArtworkUrl(row);
   if (preferredImage) {
-    return preferredImage;
+    return withImageVersion(
+      swapCardImageFolder(preferredImage, "cards_small") || preferredImage
+    );
   }
 
   return getDefaultBinderPreviewImage(row);
 }
 
 function getBinderModalImage(row) {
-  const preferredImage = getPreferredArtworkUrl(row, "cards");
+  const preferredImage = getPreferredArtworkUrl(row);
   if (preferredImage) {
-    return preferredImage;
+    return withImageVersion(
+      swapCardImageFolder(preferredImage, "cards") || preferredImage
+    );
   }
 
   return getDefaultBinderModalImage(row);
