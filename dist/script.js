@@ -6,6 +6,7 @@ let deckStatsData = { byYdk: {}, playerStats: {} };
 let artworkManifest = {};
 let artworkPrefs = {};
 let artworkPrefsPlayer = "";
+let artworkManifestByImageId = {};
 
 const deckSearch = document.getElementById("deckSearch");
 const deckSelector = document.getElementById("deckSelector");
@@ -127,6 +128,29 @@ async function loadArtworkManifest() {
   }
 
   artworkManifest = await resp.json();
+  artworkManifestByImageId = {};
+
+  for (const [baseCardId, entry] of Object.entries(artworkManifest || {})) {
+    const normalizedBaseId = normalizeCardId(baseCardId);
+
+    if (normalizedBaseId) {
+      artworkManifestByImageId[normalizedBaseId] = {
+        baseCardId: normalizedBaseId,
+        entry
+      };
+    }
+
+    for (const option of entry?.options || []) {
+      const normalizedImageId = normalizeCardId(option?.imageId);
+      if (!normalizedImageId) continue;
+
+      artworkManifestByImageId[normalizedImageId] = {
+        baseCardId: normalizedBaseId || normalizeCardId(baseCardId),
+        entry
+      };
+    }
+  }
+
   return artworkManifest;
 }
 
@@ -162,34 +186,65 @@ async function prepareBinderArtworkState() {
   await loadArtworkPrefsForPlayer(getCurrentBinderPlayerKey());
 }
 
-function getPreferredArtworkUrl(row) {
-  const cardId = String(
-    row?.cardid ||
-    row?.cardId ||
-    row?.id ||
-    row?.passcode ||
-    ""
-  ).trim();
+function getPreferredArtworkUrl(row, folderName = "cards") {
+  const lookupIds = getArtworkLookupIds(row);
 
-  if (!cardId) {
+  if (!lookupIds.length) {
     return "";
   }
 
-  const preferredImageId = String(artworkPrefs?.[cardId] || "").trim();
+  let baseCardId = "";
+  let manifestEntry = null;
+
+  for (const lookupId of lookupIds) {
+    const found = artworkManifestByImageId[lookupId];
+    if (found?.entry) {
+      baseCardId = normalizeCardId(found.baseCardId);
+      manifestEntry = found.entry;
+      break;
+    }
+  }
+
+  if (!manifestEntry) {
+    return "";
+  }
+
+  const prefLookupOrder = [baseCardId, ...lookupIds];
+  let preferredImageId = "";
+
+  for (const key of prefLookupOrder) {
+    const saved = normalizeCardId(artworkPrefs?.[key]);
+    if (saved) {
+      preferredImageId = saved;
+      break;
+    }
+  }
+
   if (!preferredImageId) {
     return "";
   }
 
-  const manifestEntry = artworkManifest?.[cardId];
-  if (!manifestEntry?.options?.length) {
+  const match = (manifestEntry.options || []).find(
+    (option) => normalizeCardId(option?.imageId) === preferredImageId
+  );
+
+  const imagePath = safeText(match?.image);
+  if (!imagePath) {
     return "";
   }
 
-  const match = manifestEntry.options.find(
-    (option) => String(option?.imageId || "").trim() === preferredImageId
-  );
+  return swapCardImageFolder(imagePath, folderName) || imagePath;
+}
 
-  return String(match?.image || "").trim();
+function getArtworkLookupIds(row) {
+  return [
+    normalizeCardId(row?.cardid),
+    normalizeCardId(row?.cardId),
+    normalizeCardId(row?.image_id),
+    normalizeCardId(row?.imageId),
+    normalizeCardId(row?.id),
+    normalizeCardId(row?.passcode)
+  ].filter(Boolean);
 }
 
 function getDeckPlayersInOrder() {
@@ -795,18 +850,18 @@ function getDefaultBinderModalImage(row) {
 }
 
 function getBinderPreviewImage(row) {
-  const preferredImage = getPreferredArtworkUrl(row);
+  const preferredImage = getPreferredArtworkUrl(row, "cards_small");
   if (preferredImage) {
-    return swapCardImageFolder(preferredImage, "cards_small") || preferredImage;
+    return preferredImage;
   }
 
   return getDefaultBinderPreviewImage(row);
 }
 
 function getBinderModalImage(row) {
-  const preferredImage = getPreferredArtworkUrl(row);
+  const preferredImage = getPreferredArtworkUrl(row, "cards");
   if (preferredImage) {
-    return swapCardImageFolder(preferredImage, "cards") || preferredImage;
+    return preferredImage;
   }
 
   return getDefaultBinderModalImage(row);
