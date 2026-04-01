@@ -533,7 +533,7 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-          if (url.pathname === "/api/artwork-prefs" && request.method === "POST") {
+      if (url.pathname === "/api/artwork-prefs" && request.method === "POST") {
       const session = await readSession(request, env);
 
       if (!session) {
@@ -733,6 +733,21 @@ export default {
         }
       });
     }
+
+    if (url.pathname === "/api/artwork-prefs" && request.method === "GET") {
+    const player = safeText(url.searchParams.get("player")).toLowerCase();
+
+    if (!PLAYER_KEYS.has(player)) {
+      return jsonResponse({ error: "Invalid player." }, { status: 400 });
+    }
+
+    const prefs = await readPlayerPrefs(env, player);
+
+    return jsonResponse({
+      player,
+      prefs
+    });
+  }
 
     if (url.pathname !== "/discord/interactions") {
       return env.ASSETS.fetch(request);
