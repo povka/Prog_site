@@ -355,6 +355,169 @@ async function writePlayerPrefs(env, player, prefs) {
   await env.ARTWORK_PREFS.put(`player:${player}`, JSON.stringify(prefs));
 }
 
+const DISCORD_AUTH_URL = "https://discord.com/oauth2/authorize";
+const DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token";
+const DISCORD_ME_URL = "https://discord.com/api/v10/users/@me";
+
+const OAUTH_STATE_COOKIE = "prog_discord_oauth_state";
+const SESSION_COOKIE = "prog_discord_session";
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+const EDITOR_PERMISSIONS = {
+  // Replace these with real Discord user IDs
+  "276095178698260490": ["asapaska"],
+  "235860238379646980": ["retroid99"],
+  "210772839165329408": ["mhkaixer"],
+  "203214195355811840": ["shiruba"]
+};
+
+function parseCookies(request) {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const out = {};
+
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex === -1) continue;
+
+    const key = trimmed.slice(0, eqIndex).trim();
+    const value = trimmed.slice(eqIndex + 1).trim();
+    out[key] = value;
+  }
+
+  return out;
+}
+
+function serializeCookie(name, value, options = {}) {
+  const parts = [`${name}=${value}`];
+
+  if (options.maxAge !== undefined) parts.push(`Max-Age=${options.maxAge}`);
+  if (options.path) parts.push(`Path=${options.path}`);
+  if (options.httpOnly) parts.push("HttpOnly");
+  if (options.secure) parts.push("Secure");
+  if (options.sameSite) parts.push(`SameSite=${options.sameSite}`);
+
+  return parts.join("; ");
+}
+
+function clearCookie(name) {
+  return serializeCookie(name, "", {
+    path: "/",
+    maxAge: 0,
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax"
+  });
+}
+
+function randomString(byteLength = 24) {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function toBase64Url(input) {
+  const bytes = input instanceof Uint8Array
+    ? input
+    : new TextEncoder().encode(String(input));
+
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function fromBase64UrlToString(value) {
+  const base64 = value
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    + "=".repeat((4 - (value.length % 4)) % 4);
+
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new TextDecoder().decode(bytes);
+}
+
+async function signHmac(message, secret) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(message)
+  );
+
+  return toBase64Url(new Uint8Array(signature));
+}
+
+async function createSessionValue(session, secret) {
+  const payload = toBase64Url(JSON.stringify(session));
+  const signature = await signHmac(payload, secret);
+  return `${payload}.${signature}`;
+}
+
+async function readSession(request, env) {
+  const cookies = parseCookies(request);
+  const raw = cookies[SESSION_COOKIE] || "";
+
+  if (!raw.includes(".")) return null;
+
+  const [payload, providedSignature] = raw.split(".", 2);
+  if (!payload || !providedSignature) return null;
+
+  const expectedSignature = await signHmac(payload, env.SESSION_SECRET);
+  if (expectedSignature !== providedSignature) return null;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(fromBase64UrlToString(payload));
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (!parsed.exp || parsed.exp < now) return null;
+
+  return parsed;
+}
+
+function getDiscordAvatarUrl(user) {
+  const userId = safeText(user?.id);
+  const avatar = safeText(user?.avatar);
+
+  if (!userId || !avatar) return "";
+  return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png`;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -370,26 +533,10 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-        if (url.pathname === "/api/artwork-prefs" && request.method === "GET") {
-      const player = safeText(url.searchParams.get("player")).toLowerCase();
+          if (url.pathname === "/api/artwork-prefs" && request.method === "POST") {
+      const session = await readSession(request, env);
 
-      if (!PLAYER_KEYS.has(player)) {
-        return jsonResponse({ error: "Invalid player." }, { status: 400 });
-      }
-
-      const prefs = await readPlayerPrefs(env, player);
-
-      return jsonResponse({
-        player,
-        prefs
-      });
-    }
-
-    if (url.pathname === "/api/artwork-prefs" && request.method === "POST") {
-      const authHeader = request.headers.get("authorization") || "";
-      const expected = `Bearer ${env.ARTWORK_ADMIN_TOKEN}`;
-
-      if (authHeader !== expected) {
+      if (!session) {
         return jsonResponse({ error: "Unauthorized." }, { status: 401 });
       }
 
@@ -408,13 +555,20 @@ export default {
         return jsonResponse({ error: "Invalid player." }, { status: 400 });
       }
 
+      const allowedPlayers = Array.isArray(session.allowedPlayers)
+        ? session.allowedPlayers
+        : [];
+
+      if (!allowedPlayers.includes(player)) {
+        return jsonResponse({ error: "Forbidden." }, { status: 403 });
+      }
+
       if (!cardId) {
         return jsonResponse({ error: "Missing cardId." }, { status: 400 });
       }
 
       const prefs = await readPlayerPrefs(env, player);
 
-      // save or clear preference
       if (imageId) {
         prefs[cardId] = imageId;
       } else {
@@ -427,6 +581,154 @@ export default {
         ok: true,
         player,
         prefs
+      });
+    }
+
+        if (url.pathname === "/auth/discord/login" && request.method === "GET") {
+      const state = randomString(24);
+      const redirectUri = new URL("/auth/discord/callback", url.origin).toString();
+
+      const authUrl = new URL(DISCORD_AUTH_URL);
+      authUrl.searchParams.set("client_id", env.DISCORD_CLIENT_ID);
+      authUrl.searchParams.set("response_type", "code");
+      authUrl.searchParams.set("scope", "identify");
+      authUrl.searchParams.set("redirect_uri", redirectUri);
+      authUrl.searchParams.set("state", state);
+      authUrl.searchParams.set("prompt", "consent");
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "location": authUrl.toString(),
+          "set-cookie": serializeCookie(OAUTH_STATE_COOKIE, state, {
+            path: "/",
+            maxAge: 600,
+            httpOnly: true,
+            secure: true,
+            sameSite: "Lax"
+          })
+        }
+      });
+    }
+
+    if (url.pathname === "/auth/discord/callback" && request.method === "GET") {
+      const code = safeText(url.searchParams.get("code"));
+      const returnedState = safeText(url.searchParams.get("state"));
+      const cookies = parseCookies(request);
+      const storedState = safeText(cookies[OAUTH_STATE_COOKIE]);
+
+      if (!code || !returnedState || !storedState || returnedState !== storedState) {
+        return new Response("Invalid OAuth state.", { status: 400 });
+      }
+
+      const redirectUri = new URL("/auth/discord/callback", url.origin).toString();
+
+      const tokenResp = await fetch(DISCORD_TOKEN_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({
+          client_id: env.DISCORD_CLIENT_ID,
+          client_secret: env.DISCORD_CLIENT_SECRET,
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: redirectUri
+        }).toString()
+      });
+
+      let tokenData = {};
+      try {
+        tokenData = await tokenResp.json();
+      } catch {
+        tokenData = {};
+      }
+
+      if (!tokenResp.ok || !safeText(tokenData.access_token)) {
+        return new Response("Discord token exchange failed.", { status: 400 });
+      }
+
+      const meResp = await fetch(DISCORD_ME_URL, {
+        headers: {
+          authorization: `Bearer ${tokenData.access_token}`
+        }
+      });
+
+      let me = {};
+      try {
+        me = await meResp.json();
+      } catch {
+        me = {};
+      }
+
+      if (!meResp.ok || !safeText(me.id)) {
+        return new Response("Failed to fetch Discord user.", { status: 400 });
+      }
+
+      const discordUserId = safeText(me.id);
+      const allowedPlayers = EDITOR_PERMISSIONS[discordUserId] || [];
+
+      const session = {
+        discordUserId,
+        username: safeText(me.global_name) || safeText(me.username) || "Discord user",
+        avatar: safeText(me.avatar),
+        allowedPlayers,
+        exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE
+      };
+
+      const sessionValue = await createSessionValue(session, env.SESSION_SECRET);
+
+      return new Response(null, {
+        status: 302,
+        headers: {
+          "location": "/settings.html",
+          "set-cookie": [
+            clearCookie(OAUTH_STATE_COOKIE),
+            serializeCookie(SESSION_COOKIE, sessionValue, {
+              path: "/",
+              maxAge: SESSION_MAX_AGE,
+              httpOnly: true,
+              secure: true,
+              sameSite: "Lax"
+            })
+          ].join(", ")
+        }
+      });
+    }
+
+    if (url.pathname === "/auth/logout" && request.method === "POST") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "set-cookie": clearCookie(SESSION_COOKIE)
+        }
+      });
+    }
+
+    if (url.pathname === "/api/me" && request.method === "GET") {
+      const session = await readSession(request, env);
+
+      if (!session) {
+        return jsonResponse({
+          loggedIn: false
+        });
+      }
+
+      return jsonResponse({
+        loggedIn: true,
+        user: {
+          discordUserId: session.discordUserId,
+          username: session.username,
+          avatarUrl: session.avatar
+            ? getDiscordAvatarUrl({
+                id: session.discordUserId,
+                avatar: session.avatar
+              })
+            : "",
+          allowedPlayers: Array.isArray(session.allowedPlayers)
+            ? session.allowedPlayers
+            : []
+        }
       });
     }
 
