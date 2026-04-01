@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artwork Settings</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div>
+        <p class="eyebrow">Prog Site</p>
+        <h1>Artwork Settings</h1>
+      </div>
+
+      <nav class="nav">
+        <a href="/index.html">Home</a>
+        <a href="/settings.html">Artwork Settings</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Shared preferences</p>
+          <h3>Choose artwork per player</h3>
+        </div>
+        <p class="muted">Changes here will be visible for everyone.</p>
+      </div>
+
+      <section class="card settings-page-card">
+        <div class="settings-shell">
+          <div class="settings-toolbar">
+            <div class="settings-player-tabs" id="playerTabs"></div>
+
+            <div class="settings-toolbar-fields">
+              <input
+                type="text"
+                id="searchInput"
+                class="deck-search"
+                placeholder="Search card name..."
+              />
+              <input
+                type="password"
+                id="tokenInput"
+                class="deck-search"
+                placeholder="Admin token"
+              />
+            </div>
+          </div>
+
+          <div class="deck-results-label settings-status" id="statusText">Loading...</div>
+
+          <div class="settings-card-list" id="cardList"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/settings.js"></script>
+</body>
+</html>
