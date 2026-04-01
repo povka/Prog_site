@@ -612,89 +612,91 @@ export default {
     }
 
     if (url.pathname === "/auth/discord/callback" && request.method === "GET") {
-      const code = safeText(url.searchParams.get("code"));
-      const returnedState = safeText(url.searchParams.get("state"));
-      const cookies = parseCookies(request);
-      const storedState = safeText(cookies[OAUTH_STATE_COOKIE]);
+  const code = safeText(url.searchParams.get("code"));
+  const returnedState = safeText(url.searchParams.get("state"));
+  const cookies = parseCookies(request);
+  const storedState = safeText(cookies[OAUTH_STATE_COOKIE]);
 
-      if (!code || !returnedState || !storedState || returnedState !== storedState) {
-        return new Response("Invalid OAuth state.", { status: 400 });
-      }
+  if (!code || !returnedState || !storedState || returnedState !== storedState) {
+    return new Response("Invalid OAuth state.", { status: 400 });
+  }
 
-      const redirectUri = new URL("/auth/discord/callback", url.origin).toString();
+  const redirectUri = new URL("/auth/discord/callback", url.origin).toString();
 
-      const tokenResp = await fetch(DISCORD_TOKEN_URL, {
-        method: "POST",
-        headers: {
-          "content-type": "application/x-www-form-urlencoded"
-        },
-        body: new URLSearchParams({
-          client_id: env.DISCORD_CLIENT_ID,
-          client_secret: env.DISCORD_CLIENT_SECRET,
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: redirectUri
-        }).toString()
-      });
+  const tokenResp = await fetch(DISCORD_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams({
+      client_id: env.DISCORD_CLIENT_ID,
+      client_secret: env.DISCORD_CLIENT_SECRET,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri
+    }).toString()
+  });
 
-      let tokenData = {};
-      try {
-        tokenData = await tokenResp.json();
-      } catch {
-        tokenData = {};
-      }
+  let tokenData = {};
+  try {
+    tokenData = await tokenResp.json();
+  } catch {
+    tokenData = {};
+  }
 
-      if (!tokenResp.ok || !safeText(tokenData.access_token)) {
-        return new Response("Discord token exchange failed.", { status: 400 });
-      }
+  if (!tokenResp.ok || !safeText(tokenData.access_token)) {
+    return new Response("Discord token exchange failed.", { status: 400 });
+  }
 
-      const meResp = await fetch(DISCORD_ME_URL, {
-        headers: {
-          authorization: `Bearer ${tokenData.access_token}`
-        }
-      });
-
-      let me = {};
-      try {
-        me = await meResp.json();
-      } catch {
-        me = {};
-      }
-
-      if (!meResp.ok || !safeText(me.id)) {
-        return new Response("Failed to fetch Discord user.", { status: 400 });
-      }
-
-      const discordUserId = safeText(me.id);
-      const allowedPlayers = EDITOR_PERMISSIONS[discordUserId] || [];
-
-      const session = {
-        discordUserId,
-        username: safeText(me.global_name) || safeText(me.username) || "Discord user",
-        avatar: safeText(me.avatar),
-        allowedPlayers,
-        exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE
-      };
-
-      const sessionValue = await createSessionValue(session, env.SESSION_SECRET);
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          "location": "/settings.html",
-          "set-cookie": [
-            clearCookie(OAUTH_STATE_COOKIE),
-            serializeCookie(SESSION_COOKIE, sessionValue, {
-              path: "/",
-              maxAge: SESSION_MAX_AGE,
-              httpOnly: true,
-              secure: true,
-              sameSite: "Lax"
-            })
-          ].join(", ")
-        }
-      });
+  const meResp = await fetch(DISCORD_ME_URL, {
+    headers: {
+      authorization: `Bearer ${tokenData.access_token}`
     }
+  });
+
+  let me = {};
+  try {
+    me = await meResp.json();
+  } catch {
+    me = {};
+  }
+
+  if (!meResp.ok || !safeText(me.id)) {
+    return new Response("Failed to fetch Discord user.", { status: 400 });
+  }
+
+  const discordUserId = safeText(me.id);
+  const allowedPlayers = EDITOR_PERMISSIONS[discordUserId] || [];
+
+  const session = {
+    discordUserId,
+    username: safeText(me.global_name) || safeText(me.username) || "Discord user",
+    avatar: safeText(me.avatar),
+    allowedPlayers,
+    exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE
+  };
+
+  const sessionValue = await createSessionValue(session, env.SESSION_SECRET);
+
+  const headers = new Headers();
+  headers.set("Location", "/settings.html");
+  headers.append("Set-Cookie", clearCookie(OAUTH_STATE_COOKIE));
+  headers.append(
+    "Set-Cookie",
+    serializeCookie(SESSION_COOKIE, sessionValue, {
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax"
+    })
+  );
+
+  return new Response(null, {
+    status: 302,
+    headers
+  });
+}
 
     if (url.pathname === "/auth/logout" && request.method === "POST") {
       return new Response(null, {
