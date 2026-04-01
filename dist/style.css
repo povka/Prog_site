@@ -2010,3 +2010,43 @@ p{color:var(--ink-soft)}
 .settings-toolbar-grid .deck-search{
   min-height:56px;
 }
+
+.legal-card{
+  padding:0;
+  overflow:hidden;
+}
+
+.legal-card-inner{
+  padding:28px;
+}
+
+.legal-title{
+  max-width:none;
+  margin:10px 0 10px;
+  font-size:clamp(2.4rem, 5vw, 4rem);
+}
+
+.legal-section + .legal-section{
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid var(--inner-line);
+}
+
+.legal-section h3{
+  margin:0 0 10px;
+  font-size:1.5rem;
+  color:#f5f8ff;
+}
+
+.legal-section p{
+  margin-bottom:0;
+}
+
+.legal-list{
+  margin:10px 0 0 20px;
+  color:var(--ink-soft);
+}
+
+.legal-list li + li{
+  margin-top:8px;
+}
