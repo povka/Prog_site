@@ -15,7 +15,7 @@
       </div>
 
       <nav class="nav">
-        <a href="/index.html">Home</a>
+        <a href="/index.html" class=""nav-artwork-link>Home</a>
         <a href="/settings.html">Artwork Settings</a>
       </nav>
     </div>
@@ -33,28 +33,27 @@
 
       <section class="card settings-page-card">
         <div class="settings-shell">
-          <div class="settings-toolbar">
             <div class="settings-player-tabs" id="playerTabs"></div>
 
-            <div class="settings-toolbar-fields">
+            <div class="settings-toolbar-grid">
                 <input
-                    type="text"
-                    id="searchInput"
-                    class="deck-search"
-                    placeholder="Search card name..."
+                type="text"
+                id="searchInput"
+                class="deck-search"
+                placeholder="Search card name..."
                 />
 
                 <div class="settings-auth-box">
-                    <div class="settings-auth-actions settings-auth-actions-single">
-                        <a href="/auth/discord/login" id="loginButton" class="button button-primary">Log in with Discord</a>
-                        <button type="button" id="logoutButton" class="button button-secondary" style="display:none;">Log out</button>
-                    </div>
+                <div class="settings-auth-actions settings-auth-actions-single">
+                    <a href="/auth/discord/login" id="loginButton" class="button button-primary">Log in with Discord</a>
+                    <button type="button" id="logoutButton" class="button button-secondary" style="display:none;">Log out</button>
+                </div>
                 </div>
 
-          <div class="deck-results-label settings-status" id="statusText">Loading...</div>
-
-          <div class="settings-card-list" id="cardList"></div>
-        </div>
+                <div class="deck-results-label settings-status" id="statusText">Loading...</div>
+                <div class="settings-card-list" id="cardList"></div>
+            </div>
+            </div>
       </section>
     </div>
   </main>
