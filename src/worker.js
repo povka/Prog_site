@@ -364,7 +364,6 @@ const SESSION_COOKIE = "prog_discord_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 const EDITOR_PERMISSIONS = {
-  // Replace these with real Discord user IDs
   "276095178698260490": ["asapaska"],
   "235860238379646980": ["retroid99"],
   "210772839165329408": ["mhkaixer"],
