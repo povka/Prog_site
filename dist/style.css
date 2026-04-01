@@ -1986,3 +1986,27 @@ p{color:var(--ink-soft)}
     grid-column:auto;
   }
 }
+
+.settings-toolbar-grid{
+  align-items:stretch;
+}
+
+.settings-auth-box{
+  min-height:56px;
+  height:100%;
+  display:flex;
+  align-items:center;
+}
+
+.settings-auth-actions-single{
+  width:100%;
+}
+
+.settings-auth-actions-single .button{
+  width:100%;
+  min-height:56px;
+}
+
+.settings-toolbar-grid .deck-search{
+  min-height:56px;
+}
