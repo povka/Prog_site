@@ -15,7 +15,6 @@ const playerTabs = document.getElementById("playerTabs");
 const searchInput = document.getElementById("searchInput");
 const statusText = document.getElementById("statusText");
 const cardList = document.getElementById("cardList");
-const authSummary = document.getElementById("authSummary");
 const loginButton = document.getElementById("loginButton");
 const logoutButton = document.getElementById("logoutButton");
 
@@ -138,13 +137,21 @@ async function logout() {
 
 function renderAuth() {
   if (isLoggedIn()) {
-    authSummary.textContent = `Logged in as ${safeText(currentUser.username)} • can edit: ${getAllowedPlayers().join(", ") || "none"}`;
-    loginButton.hidden = true;
-    logoutButton.hidden = false;
+    if (loginButton) {
+      loginButton.style.display = "none";
+    }
+
+    if (logoutButton) {
+      logoutButton.style.display = "inline-flex";
+    }
   } else {
-    authSummary.textContent = "Not logged in.";
-    loginButton.hidden = false;
-    logoutButton.hidden = true;
+    if (loginButton) {
+      loginButton.style.display = "inline-flex";
+    }
+
+    if (logoutButton) {
+      logoutButton.style.display = "none";
+    }
   }
 }
 

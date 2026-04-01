@@ -1931,3 +1931,12 @@ p{color:var(--ink-soft)}
     width:100%;
   }
 }
+
+.settings-auth-actions-single{
+  justify-content:flex-start;
+  align-items:center;
+}
+
+.settings-auth-actions-single .button{
+  min-width:190px;
+}
