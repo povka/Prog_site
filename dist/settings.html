@@ -37,20 +37,21 @@
             <div class="settings-player-tabs" id="playerTabs"></div>
 
             <div class="settings-toolbar-fields">
-              <input
-                type="text"
-                id="searchInput"
-                class="deck-search"
-                placeholder="Search card name..."
-              />
-              <input
-                type="password"
-                id="tokenInput"
-                class="deck-search"
-                placeholder="Admin token"
-              />
+                <input
+                    type="text"
+                    id="searchInput"
+                    class="deck-search"
+                    placeholder="Search card name..."
+                />
+
+                <div class="settings-auth-box">
+                    <div class="settings-auth-summary" id="authSummary">Checking login...</div>
+                    <div class="settings-auth-actions">
+                    <a href="/auth/discord/login" id="loginButton" class="button button-primary">Log in with Discord</a>
+                    <button type="button" id="logoutButton" class="button button-secondary">Log out</button>
+                    </div>
+                </div>
             </div>
-          </div>
 
           <div class="deck-results-label settings-status" id="statusText">Loading...</div>
 

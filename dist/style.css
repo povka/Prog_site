@@ -1890,3 +1890,44 @@ p{color:var(--ink-soft)}
     width:100%;
   }
 }
+
+/* SETTINGS AUTH */
+
+.settings-auth-box{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:10px;
+  min-height:52px;
+  padding:10px 14px;
+  border:2px solid var(--line);
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
+.settings-auth-summary{
+  color:var(--ink);
+  font-size:0.92rem;
+  font-weight:700;
+}
+
+.settings-auth-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.settings-auth-actions .button{
+  min-height:40px;
+  padding:8px 14px;
+}
+
+@media (max-width: 820px){
+  .settings-auth-actions{
+    flex-direction:column;
+  }
+
+  .settings-auth-actions .button{
+    width:100%;
+  }
+}

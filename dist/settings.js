@@ -5,16 +5,19 @@ const PLAYERS = [
   { key: "shiruba", label: "ShirubaMaebure" }
 ];
 
-let currentPlayer = "asapaska";
+let currentPlayer = "";
 let altArts = {};
 let prefs = {};
 let searchText = "";
+let currentUser = null;
 
 const playerTabs = document.getElementById("playerTabs");
 const searchInput = document.getElementById("searchInput");
-const tokenInput = document.getElementById("tokenInput");
 const statusText = document.getElementById("statusText");
 const cardList = document.getElementById("cardList");
+const authSummary = document.getElementById("authSummary");
+const loginButton = document.getElementById("loginButton");
+const logoutButton = document.getElementById("logoutButton");
 
 function safeText(value) {
   return value ? String(value).trim() : "";
@@ -24,8 +27,16 @@ function setStatus(text) {
   statusText.textContent = text;
 }
 
-function getToken() {
-  return safeText(tokenInput.value);
+function getAllowedPlayers() {
+  return Array.isArray(currentUser?.allowedPlayers) ? currentUser.allowedPlayers : [];
+}
+
+function isLoggedIn() {
+  return !!currentUser;
+}
+
+function canEditPlayer(playerKey) {
+  return getAllowedPlayers().includes(playerKey);
 }
 
 async function loadAltArts() {
@@ -36,9 +47,34 @@ async function loadAltArts() {
   altArts = await resp.json();
 }
 
+async function loadMe() {
+  const resp = await fetch("/api/me", {
+    cache: "no-store",
+    credentials: "same-origin"
+  });
+
+  if (!resp.ok) {
+    throw new Error("Failed to load session.");
+  }
+
+  const data = await resp.json();
+
+  if (data?.loggedIn && data?.user) {
+    currentUser = data.user;
+  } else {
+    currentUser = null;
+  }
+}
+
 async function loadPrefs() {
+  if (!currentPlayer) {
+    prefs = {};
+    return;
+  }
+
   const resp = await fetch(`/api/artwork-prefs?player=${encodeURIComponent(currentPlayer)}`, {
-    cache: "no-store"
+    cache: "no-store",
+    credentials: "same-origin"
   });
 
   if (!resp.ok) {
@@ -50,18 +86,21 @@ async function loadPrefs() {
 }
 
 async function savePref(cardId, imageId) {
-  const token = getToken();
+  if (!isLoggedIn()) {
+    alert("Log in with Discord first.");
+    return;
+  }
 
-  if (!token) {
-    alert("Enter admin token first.");
+  if (!canEditPlayer(currentPlayer)) {
+    alert("You are not allowed to edit this player.");
     return;
   }
 
   const resp = await fetch("/api/artwork-prefs", {
     method: "POST",
+    credentials: "same-origin",
     headers: {
-      "content-type": "application/json",
-      "authorization": `Bearer ${token}`
+      "content-type": "application/json"
     },
     body: JSON.stringify({
       player: currentPlayer,
@@ -82,10 +121,49 @@ async function savePref(cardId, imageId) {
   setStatus(`Saved artwork for ${currentPlayer}.`);
 }
 
+async function logout() {
+  await fetch("/auth/logout", {
+    method: "POST",
+    credentials: "same-origin"
+  });
+
+  currentUser = null;
+  prefs = {};
+  currentPlayer = "";
+  renderAuth();
+  buildTabs();
+  renderCards();
+  setStatus("Logged out.");
+}
+
+function renderAuth() {
+  if (isLoggedIn()) {
+    authSummary.textContent = `Logged in as ${safeText(currentUser.username)} • can edit: ${getAllowedPlayers().join(", ") || "none"}`;
+    loginButton.hidden = true;
+    logoutButton.hidden = false;
+  } else {
+    authSummary.textContent = "Not logged in.";
+    loginButton.hidden = false;
+    logoutButton.hidden = true;
+  }
+}
+
 function buildTabs() {
   playerTabs.innerHTML = "";
 
-  for (const player of PLAYERS) {
+  const allowedPlayers = getAllowedPlayers();
+  const visiblePlayers = PLAYERS.filter((player) => allowedPlayers.includes(player.key));
+
+  if (!visiblePlayers.length) {
+    currentPlayer = "";
+    return;
+  }
+
+  if (!visiblePlayers.some((player) => player.key === currentPlayer)) {
+    currentPlayer = visiblePlayers[0].key;
+  }
+
+  for (const player of visiblePlayers) {
     const btn = document.createElement("button");
     btn.className = `settings-player-tab${player.key === currentPlayer ? " is-active" : ""}`;
     btn.type = "button";
@@ -128,8 +206,19 @@ function getFilteredEntries() {
 }
 
 function renderCards() {
-  const entries = getFilteredEntries();
   cardList.innerHTML = "";
+
+  if (!isLoggedIn()) {
+    cardList.innerHTML = `<div class="settings-empty">Log in with Discord to edit artwork preferences.</div>`;
+    return;
+  }
+
+  if (!currentPlayer) {
+    cardList.innerHTML = `<div class="settings-empty">Your Discord account is logged in, but it is not allowed to edit any player tabs yet.</div>`;
+    return;
+  }
+
+  const entries = getFilteredEntries();
 
   if (!entries.length) {
     cardList.innerHTML = `<div class="settings-empty">No matching cards found.</div>`;
@@ -197,17 +286,31 @@ function renderCards() {
 
 async function init() {
   try {
-    buildTabs();
+    logoutButton.addEventListener("click", logout);
 
     searchInput.addEventListener("input", () => {
       searchText = safeText(searchInput.value);
       renderCards();
     });
 
-    await loadAltArts();
-    await loadPrefs();
+    await Promise.all([
+      loadAltArts(),
+      loadMe()
+    ]);
+
+    renderAuth();
+    buildTabs();
+
+    if (currentPlayer) {
+      await loadPrefs();
+      setStatus(`Showing ${PLAYERS.find((p) => p.key === currentPlayer)?.label || currentPlayer} preferences.`);
+    } else if (isLoggedIn()) {
+      setStatus("Logged in, but no editable players are assigned to this Discord account.");
+    } else {
+      setStatus("Log in with Discord to edit artwork preferences.");
+    }
+
     renderCards();
-    setStatus(`Showing ${PLAYERS.find(p => p.key === currentPlayer)?.label || currentPlayer} preferences.`);
   } catch (err) {
     console.error(err);
     setStatus(err?.message || "Failed to load settings page.");
