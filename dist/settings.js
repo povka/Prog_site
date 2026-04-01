@@ -27,6 +27,29 @@ function withImageVersion(url) {
   return `${text}${separator}v=${encodeURIComponent(IMAGE_VERSION)}`;
 }
 
+
+function swapCardImageFolder(path, folderName) {
+  const text = safeText(path);
+  if (!text) return "";
+
+  if (text.includes("/images/cards_small/")) {
+    return text.replace("/images/cards_small/", `/images/${folderName}/`);
+  }
+
+  if (text.includes("/images/cards/")) {
+    return text.replace("/images/cards/", `/images/${folderName}/`);
+  }
+
+  if (text.includes("images/cards_small/")) {
+    return text.replace("images/cards_small/", `images/${folderName}/`);
+  }
+
+  if (text.includes("images/cards/")) {
+    return text.replace("images/cards/", `images/${folderName}/`);
+  }
+
+  return text;
+}
 function safeText(value) {
   return value ? String(value).trim() : "";
 }
@@ -282,7 +305,9 @@ function renderCards() {
 
       const img = document.createElement("img");
       img.className = "settings-art-image";
-      img.src = withImageVersion(imageUrl);
+      img.src = withImageVersion(
+        swapCardImageFolder(imageUrl, "cards_small") || imageUrl
+      );
       img.alt = `${entry?.name || cardId} - ${imageId}`;
 
       const meta = document.createElement("div");
