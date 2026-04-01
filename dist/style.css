@@ -1940,3 +1940,18 @@ p{color:var(--ink-soft)}
 .settings-auth-actions-single .button{
   min-width:190px;
 }
+
+.nav-artwork-link{
+  border:1px solid var(--accent) !important;
+  background:linear-gradient(135deg, rgba(94,200,255,0.24), rgba(193,35,136,0.22));
+  color:#ffffff !important;
+  font-weight:800 !important;
+  box-shadow:0 0 0 1px rgba(94,200,255,0.14), 0 0 24px rgba(94,200,255,0.12);
+}
+
+.nav-artwork-link:hover{
+  border-color:var(--accent) !important;
+  background:linear-gradient(135deg, rgba(94,200,255,0.30), rgba(196,92,255,0.24));
+  transform:translateY(-2px);
+  box-shadow:0 0 0 1px rgba(94,200,255,0.18), 0 0 26px rgba(94,200,255,0.16);
+}
