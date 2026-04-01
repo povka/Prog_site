@@ -324,6 +324,37 @@ function buildCardAutocompleteChoices(cardIndex, options) {
   });
 }
 
+const PLAYER_KEYS = new Set(["asapaska", "retroid99", "mhkaixer", "shiruba"]);
+
+function jsonResponse(data, init = {}) {
+  return new Response(JSON.stringify(data), {
+    status: init.status || 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...init.headers
+    }
+  });
+}
+
+async function readPlayerPrefs(env, player) {
+  const raw = await env.ARTWORK_PREFS.get(`player:${player}`, "text");
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writePlayerPrefs(env, player, prefs) {
+  await env.ARTWORK_PREFS.put(`player:${player}`, JSON.stringify(prefs));
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -337,6 +368,66 @@ export default {
       }
 
       return env.ASSETS.fetch(request);
+    }
+
+        if (url.pathname === "/api/artwork-prefs" && request.method === "GET") {
+      const player = safeText(url.searchParams.get("player")).toLowerCase();
+
+      if (!PLAYER_KEYS.has(player)) {
+        return jsonResponse({ error: "Invalid player." }, { status: 400 });
+      }
+
+      const prefs = await readPlayerPrefs(env, player);
+
+      return jsonResponse({
+        player,
+        prefs
+      });
+    }
+
+    if (url.pathname === "/api/artwork-prefs" && request.method === "POST") {
+      const authHeader = request.headers.get("authorization") || "";
+      const expected = `Bearer ${env.ARTWORK_ADMIN_TOKEN}`;
+
+      if (authHeader !== expected) {
+        return jsonResponse({ error: "Unauthorized." }, { status: 401 });
+      }
+
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return jsonResponse({ error: "Invalid JSON body." }, { status: 400 });
+      }
+
+      const player = safeText(body?.player).toLowerCase();
+      const cardId = safeText(body?.cardId);
+      const imageId = safeText(body?.imageId);
+
+      if (!PLAYER_KEYS.has(player)) {
+        return jsonResponse({ error: "Invalid player." }, { status: 400 });
+      }
+
+      if (!cardId) {
+        return jsonResponse({ error: "Missing cardId." }, { status: 400 });
+      }
+
+      const prefs = await readPlayerPrefs(env, player);
+
+      // save or clear preference
+      if (imageId) {
+        prefs[cardId] = imageId;
+      } else {
+        delete prefs[cardId];
+      }
+
+      await writePlayerPrefs(env, player, prefs);
+
+      return jsonResponse({
+        ok: true,
+        player,
+        prefs
+      });
     }
 
     if (url.pathname !== "/discord/interactions") {
