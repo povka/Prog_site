@@ -3,6 +3,9 @@ let siteData = {};
 let currentBinderRows = [];
 let banlistStatusById = new Map();
 let deckStatsData = { byYdk: {}, playerStats: {} };
+let artworkManifest = {};
+let artworkPrefs = {};
+let artworkPrefsPlayer = "";
 
 const deckSearch = document.getElementById("deckSearch");
 const deckSelector = document.getElementById("deckSelector");
@@ -93,6 +96,100 @@ function getDeckStatsForDeck(deck) {
 
   const entry = deckStatsData?.byYdk?.[ydkPath] || null;
   return entry && !entry.missing ? entry : null;
+}
+
+function getCurrentBinderPlayerKey() {
+  const value = String(binderPlayer?.value || "").trim().toLowerCase();
+
+  const match = value.match(/([a-z0-9_-]+)\.json$/i);
+  if (match) {
+    return match[1].toLowerCase();
+  }
+
+  return value
+    .replace(/^.*\//, "")
+    .replace(/\.json$/i, "")
+    .trim()
+    .toLowerCase();
+}
+
+async function loadArtworkManifest() {
+  if (Object.keys(artworkManifest).length) {
+    return artworkManifest;
+  }
+
+  const resp = await fetch("/data/generated/alt-artworks.json", {
+    cache: "no-store"
+  });
+
+  if (!resp.ok) {
+    throw new Error("Failed to load alt-artworks.json");
+  }
+
+  artworkManifest = await resp.json();
+  return artworkManifest;
+}
+
+async function loadArtworkPrefsForPlayer(player) {
+  const playerKey = String(player || "").trim().toLowerCase();
+
+  if (!playerKey) {
+    artworkPrefs = {};
+    artworkPrefsPlayer = "";
+    return artworkPrefs;
+  }
+
+  if (artworkPrefsPlayer === playerKey) {
+    return artworkPrefs;
+  }
+
+  const resp = await fetch(`/api/artwork-prefs?player=${encodeURIComponent(playerKey)}`, {
+    cache: "no-store"
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Failed to load artwork prefs for ${playerKey}`);
+  }
+
+  const data = await resp.json();
+  artworkPrefs = data?.prefs || {};
+  artworkPrefsPlayer = playerKey;
+  return artworkPrefs;
+}
+
+async function prepareBinderArtworkState() {
+  await loadArtworkManifest();
+  await loadArtworkPrefsForPlayer(getCurrentBinderPlayerKey());
+}
+
+function getPreferredArtworkUrl(row) {
+  const cardId = String(
+    row?.cardid ||
+    row?.cardId ||
+    row?.id ||
+    row?.passcode ||
+    ""
+  ).trim();
+
+  if (!cardId) {
+    return "";
+  }
+
+  const preferredImageId = String(artworkPrefs?.[cardId] || "").trim();
+  if (!preferredImageId) {
+    return "";
+  }
+
+  const manifestEntry = artworkManifest?.[cardId];
+  if (!manifestEntry?.options?.length) {
+    return "";
+  }
+
+  const match = manifestEntry.options.find(
+    (option) => String(option?.imageId || "").trim() === preferredImageId
+  );
+
+  return String(match?.image || "").trim();
 }
 
 function getDeckPlayersInOrder() {
@@ -569,8 +666,7 @@ function renderDecks(weekKey) {
 
   const trackedDecks = week.decks.filter((deck) => !!getDeckStatsForDeck(deck)).length;
 
-  deckResultsLabel.textContent =
-    ``;
+  deckResultsLabel.textContent = `Showing ${week.decks.length} decks • ${trackedDecks} with archetype data`;
 
   deckDisplay.innerHTML = "";
   renderDeckPlayerStats(weekKey);
@@ -678,32 +774,42 @@ function swapCardImageFolder(path, folderName) {
   return text;
 }
 
-function getBinderPreviewImage(row) {
+function getDefaultBinderPreviewImage(row) {
   const directImage = safeText(row.image);
   if (directImage) {
-    return swapCardImageFolder(directImage, "cards_small");
+    return swapCardImageFolder(directImage, "cards_small") || directImage;
   }
 
   const cardId = getCardImageId(row);
-  if (cardId) {
-    return `images/cards_small/${cardId}.jpg`;
+  return cardId ? `/images/cards_small/${cardId}.jpg` : "";
+}
+
+function getDefaultBinderModalImage(row) {
+  const directImage = safeText(row.image);
+  if (directImage) {
+    return swapCardImageFolder(directImage, "cards") || directImage;
   }
 
-  return "";
+  const cardId = getCardImageId(row);
+  return cardId ? `/images/cards/${cardId}.jpg` : "";
+}
+
+function getBinderPreviewImage(row) {
+  const preferredImage = getPreferredArtworkUrl(row);
+  if (preferredImage) {
+    return swapCardImageFolder(preferredImage, "cards_small") || preferredImage;
+  }
+
+  return getDefaultBinderPreviewImage(row);
 }
 
 function getBinderModalImage(row) {
-  const directImage = safeText(row.image);
-  if (directImage) {
-    return swapCardImageFolder(directImage, "cards");
+  const preferredImage = getPreferredArtworkUrl(row);
+  if (preferredImage) {
+    return swapCardImageFolder(preferredImage, "cards") || preferredImage;
   }
 
-  const cardId = getCardImageId(row);
-  if (cardId) {
-    return `images/cards/${cardId}.jpg`;
-  }
-
-  return "";
+  return getDefaultBinderModalImage(row);
 }
 
 function getSelectedSubtypeValues() {
@@ -876,10 +982,6 @@ function syncFilterVisibility() {
   }
 }
 
-function isXyzMonster(row) {
-  return safeText(row.type).toLowerCase().includes("xyz");
-}
-
 function getSortValue(row, sortKey) {
   switch (sortKey) {
     case "name":
@@ -985,7 +1087,7 @@ function applyBinderFilters(rows) {
   const useSpellFilters = isSpellFilterMode();
   const useTrapFilters = isTrapFilterMode();
 
-  let filtered = rows.filter((row) => {
+  const filtered = rows.filter((row) => {
     const searchable = [
       row.name,
       row.set_name,
@@ -1015,6 +1117,7 @@ function applyBinderFilters(rows) {
       const matchesAnySearchTerm = searchTerms.some((term) => searchable.includes(term));
       if (!matchesAnySearchTerm) return false;
     }
+
     if (selectedType && getHighLevelType(row) !== selectedType) return false;
 
     if (useSpellFilters && selectedSpellType) {
@@ -1084,7 +1187,8 @@ function applyBinderFilters(rows) {
     if (useMonsterFilters && maxLink !== null) {
       if (rowLink === null || rowLink > maxLink) return false;
     }
-        if (useMonsterFilters && scaleExact !== null) {
+
+    if (useMonsterFilters && scaleExact !== null) {
       if (rowScale === null || rowScale !== scaleExact) return false;
     }
     if (useMonsterFilters && minScale !== null) {
@@ -1107,7 +1211,7 @@ function applyBinderFilters(rows) {
     return true;
   });
 
-    filtered.sort((a, b) => {
+  filtered.sort((a, b) => {
     const result = compareSortValues(
       getSortValue(a, binderSort.value),
       getSortValue(b, binderSort.value),
@@ -1194,11 +1298,23 @@ async function loadBinder(jsonPath) {
   binderGrid.innerHTML = "";
 
   try {
-    const res = await fetch(jsonPath);
+    try {
+      await prepareBinderArtworkState();
+    } catch (artworkError) {
+      console.warn("Artwork preference load failed:", artworkError);
+      artworkPrefs = {};
+      artworkPrefsPlayer = getCurrentBinderPlayerKey();
+    }
+
+    const res = await fetch(jsonPath, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to load binder JSON");
-    currentBinderRows = await res.json();
+
+    const data = await res.json();
+    currentBinderRows = Array.isArray(data) ? data : [];
     renderBinder(currentBinderRows);
-  } catch {
+  } catch (error) {
+    console.error(error);
+    currentBinderRows = [];
     binderStatus.textContent = "Could not load binder JSON.";
   }
 }
@@ -1251,9 +1367,10 @@ filterLinkArrows.addEventListener("change", (event) => {
   }
 });
 
-binderPlayer.addEventListener("change", () => {
+binderPlayer.addEventListener("change", async () => {
   syncFilterVisibility();
-  loadBinder(binderPlayer.value);
+  artworkPrefsPlayer = "";
+  await loadBinder(binderPlayer.value);
 });
 
 binderSort.addEventListener("change", () => renderBinder(currentBinderRows));
@@ -1284,8 +1401,8 @@ async function init() {
 
   syncFilterVisibility();
   updateSortDirectionButton();
-  updateFiltersToggleButton();
-  loadBinder(binderPlayer.value);
+  setBinderFiltersCollapsed(binderFiltersCollapsed);
+  await loadBinder(binderPlayer.value);
 }
 
 init();
