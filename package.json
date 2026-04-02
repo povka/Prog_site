@@ -11,7 +11,8 @@
     "playwright-core": "^1.58.2"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "notify:website": "python scripts/notify_website_update.py"
   },
   "repository": {
     "type": "git",

@@ -1,0 +1,48 @@
+name: Notify Website Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      week:
+        description: "Optional week override, e.g. Week 4"
+        required: false
+        type: string
+      added:
+        description: "Optional custom Added line"
+        required: false
+        type: string
+
+jobs:
+  notify-website:
+    runs-on: ubuntu-latest
+
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CHANNEL_ID: ${{ vars.DISCORD_CHANNEL_ID }}
+      DISCORD_ROLE_ID: ${{ vars.DISCORD_ROLE_ID }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build deck stats
+        run: python scripts/build_deck_stats.py
+
+      - name: Send Discord notification
+        run: |
+          args=()
+          if [ -n "$INPUT_WEEK" ]; then
+            args+=(--week "$INPUT_WEEK")
+          fi
+          if [ -n "$INPUT_ADDED" ]; then
+            args+=(--added "$INPUT_ADDED")
+          fi
+          python scripts/notify_website_update.py "${args[@]}"
+        env:
+          INPUT_WEEK: ${{ inputs.week }}
+          INPUT_ADDED: ${{ inputs.added }}
