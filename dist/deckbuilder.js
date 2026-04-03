@@ -555,26 +555,9 @@ function getPreviewInfoItems(row) {
   return items.filter((item) => safeText(item.value))
 }
 
-function renderPreviewBadges(row) {
-  const badges = getPreviewBadgeValues(row)
+function renderPreviewBadges() {
   previewTags.innerHTML = ""
-
-  if (!badges.length) {
-    previewTags.hidden = true
-    return
-  }
-
-  const fragment = document.createDocumentFragment()
-
-  badges.forEach((value) => {
-    const badge = document.createElement("span")
-    badge.className = "deckbuilder-preview-tag"
-    badge.textContent = value
-    fragment.appendChild(badge)
-  })
-
-  previewTags.appendChild(fragment)
-  previewTags.hidden = false
+  previewTags.hidden = true
 }
 
 function renderPreviewInfo(row) {
