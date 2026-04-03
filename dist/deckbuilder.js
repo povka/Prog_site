@@ -619,7 +619,8 @@ function renderPreviewInfo(row) {
 function resetPreview() {
   previewCardKey = ""
   previewTitle.textContent = "Select a card"
-  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(previewCardKey)}`  previewImage.src = ""
+  previewSubtitle.textContent = "Left click a card to preview it here. Right click a card to add it to your deck."
+  previewImage.src = ""
   previewImage.alt = ""
   previewImage.hidden = true
   previewEmpty.hidden = false
@@ -642,8 +643,7 @@ function refreshPreviewPanel() {
 
   const imageUrl = row._previewImageLarge || getBinderModalImage(row)
   previewTitle.textContent = safeText(row.name) || "Unknown Card"
-  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getRemainingCount(previewCardKey)} left to add • ${getCopyLimitLabel(previewCardKey)}`
-
+  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(previewCardKey)}`
   if (imageUrl) {
     previewImage.src = imageUrl
     previewImage.alt = safeText(row.name) || "Card image"
