@@ -36,6 +36,9 @@ let banlistTextCache = new Map()
 let deckUsageByKey = new Map()
 let currentPoolRenderToken = 0
 const POOL_RENDER_CHUNK_SIZE = 36
+const POOL_PAGE_SIZE = 25
+let currentPoolPage = 1
+let currentFilteredPoolRows = []
 let deckState = {
   main: [],
   extra: []
@@ -98,6 +101,10 @@ const toggleFiltersButton = document.getElementById("toggleFiltersButton")
 const binderSort = document.getElementById("binderSort")
 const binderSortDirectionButton = document.getElementById("binderSortDirection")
 const deckBanlist = document.getElementById("deckBanlist")
+const binderPager = document.getElementById("binderPager")
+const binderPrevPage = document.getElementById("binderPrevPage")
+const binderPageInfo = document.getElementById("binderPageInfo")
+const binderNextPage = document.getElementById("binderNextPage")
 
 function safeText(value) {
   return value ? String(value).trim() : ""
@@ -1518,6 +1525,8 @@ async function loadPlayerContext() {
     deckState = { main: [], extra: [] }
     rebuildDeckUsageIndex()
     resetPreview()
+    currentPoolPage = 1
+    currentFilteredPoolRows = []
     renderAll()
     return
   }
@@ -1658,24 +1667,71 @@ function renderPoolChunk(rows, startIndex, token) {
   }
 }
 
+function getPoolPageCount(rows = currentFilteredPoolRows) {
+  return Math.max(1, Math.ceil((rows?.length || 0) / POOL_PAGE_SIZE))
+}
+
+function goToPoolPage(nextPage) {
+  const pageCount = getPoolPageCount()
+  currentPoolPage = Math.min(Math.max(1, nextPage), pageCount)
+  renderPool()
+}
+
+function renderPoolPager(rows) {
+  if (!rows.length) {
+    binderPager.hidden = true
+    return
+  }
+
+  const pageCount = getPoolPageCount(rows)
+  const startItem = (currentPoolPage - 1) * POOL_PAGE_SIZE + 1
+  const endItem = Math.min(currentPoolPage * POOL_PAGE_SIZE, rows.length)
+
+  binderPager.hidden = false
+  binderPrevPage.disabled = currentPoolPage <= 1
+  binderNextPage.disabled = currentPoolPage >= pageCount
+  binderPageInfo.textContent = `Page ${currentPoolPage} of ${pageCount} • ${startItem}-${endItem} of ${rows.length}`
+}
+
+function renderPoolFromFirstPage() {
+  currentPoolPage = 1
+  renderPool()
+}
+
 function renderPool() {
   const filtered = applyBinderFilters(currentBinderRows)
-  const totalCopies = filtered.reduce((sum, row) => sum + (toNumber(row.quantity) || 1), 0)
+  currentFilteredPoolRows = filtered
 
-  binderStatus.textContent = `Showing ${totalCopies} copies across ${filtered.length} unique cards`
+  const totalCopies = filtered.reduce((sum, row) => sum + (toNumber(row.quantity) || 1), 0)
+  const pageCount = getPoolPageCount(filtered)
+
+  currentPoolPage = Math.min(currentPoolPage, pageCount)
   binderGrid.innerHTML = ""
 
   if (!filtered.length) {
-    currentPoolRenderToken += 1
+    binderPager.hidden = true
+    binderStatus.textContent = "No cards matched the current filters."
     binderGrid.innerHTML = '<div class="binder-empty">No cards matched the current filters.</div>'
+
     if (!poolByKey.has(previewCardKey)) {
       resetPreview()
     }
     return
   }
 
-  const token = ++currentPoolRenderToken
-  renderPoolChunk(filtered, 0, token)
+  const startIndex = (currentPoolPage - 1) * POOL_PAGE_SIZE
+  const pageRows = filtered.slice(startIndex, startIndex + POOL_PAGE_SIZE)
+  const startDisplay = startIndex + 1
+  const endDisplay = startIndex + pageRows.length
+
+  binderStatus.textContent = `Showing ${startDisplay}-${endDisplay} of ${filtered.length} unique cards • ${totalCopies} copies`
+
+  const fragment = document.createDocumentFragment()
+  pageRows.forEach((row) => fragment.appendChild(buildPoolCard(row)))
+  binderGrid.appendChild(fragment)
+
+  syncPreviewSelection()
+  renderPoolPager(filtered)
 }
 
 binderGrid.addEventListener("click", (event) => {
@@ -1856,50 +1912,69 @@ function renderAll() {
   renderSection("extra", extraList, extraSectionLabel)
 }
 
-const debouncedPoolRender = debounce(() => renderPool(), 140)
+const debouncedPoolRender = debounce(() => renderPoolFromFirstPage(), 140)
 
 binderSearch.addEventListener("input", debouncedPoolRender)
+
 filterType.addEventListener("change", () => {
   syncFilterVisibility()
-  renderPool()
+  renderPoolFromFirstPage()
 })
-filterAttribute.addEventListener("change", () => renderPool())
-filterRace.addEventListener("change", () => renderPool())
-filterSpellType.addEventListener("change", () => renderPool())
-filterTrapType.addEventListener("change", () => renderPool())
+
+filterAttribute.addEventListener("change", () => renderPoolFromFirstPage())
+filterRace.addEventListener("change", () => renderPoolFromFirstPage())
+filterSpellType.addEventListener("change", () => renderPoolFromFirstPage())
+filterTrapType.addEventListener("change", () => renderPoolFromFirstPage())
+
 filterSubtypes.addEventListener("change", (event) => {
-  if (event.target.matches('input[type="checkbox"]')) renderPool()
+  if (event.target.matches('input[type="checkbox"]')) renderPoolFromFirstPage()
 })
+
 filterAtkExact.addEventListener("input", debouncedPoolRender)
 filterAtkMin.addEventListener("input", debouncedPoolRender)
 filterAtkMax.addEventListener("input", debouncedPoolRender)
 filterDefExact.addEventListener("input", debouncedPoolRender)
 filterDefMin.addEventListener("input", debouncedPoolRender)
 filterDefMax.addEventListener("input", debouncedPoolRender)
+
 filterLevelExact.addEventListener("input", debouncedPoolRender)
 filterLevelMin.addEventListener("input", debouncedPoolRender)
 filterLevelMax.addEventListener("input", debouncedPoolRender)
+
 filterRankExact.addEventListener("input", debouncedPoolRender)
 filterRankMin.addEventListener("input", debouncedPoolRender)
 filterRankMax.addEventListener("input", debouncedPoolRender)
+
 filterLinkExact.addEventListener("input", debouncedPoolRender)
 filterLinkMin.addEventListener("input", debouncedPoolRender)
 filterLinkMax.addEventListener("input", debouncedPoolRender)
+
 filterScaleExact.addEventListener("input", debouncedPoolRender)
 filterScaleMin.addEventListener("input", debouncedPoolRender)
 filterScaleMax.addEventListener("input", debouncedPoolRender)
+
 filterLinkArrows.addEventListener("change", (event) => {
-  if (event.target.matches('input[type="checkbox"]')) renderPool()
+  if (event.target.matches('input[type="checkbox"]')) renderPoolFromFirstPage()
 })
 
-binderSort.addEventListener("change", () => renderPool())
+binderSort.addEventListener("change", () => renderPoolFromFirstPage())
+
 binderSortDirectionButton.addEventListener("click", () => {
   binderSortDirection = binderSortDirection === "asc" ? "desc" : "asc"
   updateSortDirectionButton()
-  renderPool()
+  renderPoolFromFirstPage()
 })
+
 toggleFiltersButton.addEventListener("click", () => {
   setBinderFiltersCollapsed(!binderFiltersCollapsed)
+})
+
+binderPrevPage.addEventListener("click", () => {
+  goToPoolPage(currentPoolPage - 1)
+})
+
+binderNextPage.addEventListener("click", () => {
+  goToPoolPage(currentPoolPage + 1)
 })
 
 deckBanlist.addEventListener("change", async () => {
