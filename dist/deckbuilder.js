@@ -31,6 +31,11 @@ let binderFiltersCollapsed = true
 let previewCardKey = ""
 let activeBanlistFile = FALLBACK_BANLIST_FILE
 let banlistLimitById = new Map()
+let banlistManifestLoaded = false
+let banlistTextCache = new Map()
+let deckUsageByKey = new Map()
+let currentPoolRenderToken = 0
+const POOL_RENDER_CHUNK_SIZE = 36
 let deckState = {
   main: [],
   extra: []
@@ -57,6 +62,11 @@ const previewTitle = document.getElementById("previewTitle")
 const previewSubtitle = document.getElementById("previewSubtitle")
 const previewImage = document.getElementById("previewImage")
 const previewEmpty = document.getElementById("previewEmpty")
+const previewTags = document.getElementById("previewTags")
+const previewStatsSection = document.getElementById("previewStatsSection")
+const previewStats = document.getElementById("previewStats")
+const previewTextSection = document.getElementById("previewTextSection")
+const previewDescription = document.getElementById("previewDescription")
 
 const filterType = document.getElementById("filterType")
 const filterAttribute = document.getElementById("filterAttribute")
@@ -113,6 +123,30 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null
 }
 
+function debounce(fn, delay = 140) {
+  let timer = null
+
+  return (...args) => {
+    window.clearTimeout(timer)
+    timer = window.setTimeout(() => fn(...args), delay)
+  }
+}
+
+function scheduleChunk(callback) {
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(() => callback(), { timeout: 120 })
+    return
+  }
+
+  window.setTimeout(callback, 16)
+}
+
+function displayValue(value, fallback = "—") {
+  if (value === null || value === undefined) return fallback
+  const text = String(value).trim()
+  return text ? text : fallback
+}
+
 function normalizeCardId(value) {
   const raw = safeText(value)
   if (!raw) return ""
@@ -166,8 +200,10 @@ function setBanlistOptions(files, defaultFile) {
 }
 
 async function loadBanlistManifest() {
+  if (banlistManifestLoaded) return
+
   try {
-    const res = await fetch(BANLIST_MANIFEST_PATH, { cache: "no-store" })
+    const res = await fetch(BANLIST_MANIFEST_PATH, { cache: "force-cache" })
     if (!res.ok) throw new Error("Failed to load banlist manifest")
 
     const manifest = await res.json()
@@ -177,6 +213,8 @@ async function loadBanlistManifest() {
     setBanlistOptions(files, defaultFile)
   } catch {
     setBanlistOptions([FALLBACK_BANLIST_FILE], FALLBACK_BANLIST_FILE)
+  } finally {
+    banlistManifestLoaded = true
   }
 }
 
@@ -237,18 +275,27 @@ async function loadBanlistData(fileName = deckBanlist.value || activeBanlistFile
     deckBanlist.value = selectedFile
   }
 
+  if (banlistTextCache.has(selectedFile)) {
+    banlistLimitById = parseBanlistConfig(banlistTextCache.get(selectedFile))
+    refreshBanlistStateForPoolRows()
+    return
+  }
+
   try {
     const res = await fetch(`${BANLISTS_BASE_PATH}/${encodeURIComponent(selectedFile)}`, {
-      cache: "no-store"
+      cache: "force-cache"
     })
 
     if (!res.ok) throw new Error("Failed to load banlist")
 
     const text = await res.text()
+    banlistTextCache.set(selectedFile, text)
     banlistLimitById = parseBanlistConfig(text)
   } catch {
     banlistLimitById = new Map()
   }
+
+  refreshBanlistStateForPoolRows()
 }
 
 function getStorageKey() {
@@ -276,7 +323,7 @@ function getBanlistStatusForRow(row) {
 }
 
 function getBanlistIconForRow(row) {
-  const status = getBanlistStatusForRow(row)
+  const status = row?._banlistStatus ?? getBanlistStatusForRow(row)
 
   if (status === 0) return "images/banlist/banned.png"
   if (status === 1) return "images/banlist/limited1.png"
@@ -286,7 +333,7 @@ function getBanlistIconForRow(row) {
 }
 
 function getBanlistLabelForRow(row) {
-  const status = getBanlistStatusForRow(row)
+  const status = row?._banlistStatus ?? getBanlistStatusForRow(row)
 
   if (status === 0) return "Forbidden"
   if (status === 1) return "Limited"
@@ -322,6 +369,27 @@ function getCopyLimitLabel(cardKey) {
   }
 
   return `Max ${MAX_COPIES_PER_DECK}`
+}
+
+function rebuildDeckUsageIndex() {
+  const next = new Map()
+
+  for (const section of ["main", "extra"]) {
+    for (const cardKey of deckState[section] || []) {
+      next.set(cardKey, (next.get(cardKey) || 0) + 1)
+    }
+  }
+
+  deckUsageByKey = next
+}
+
+function refreshBanlistStateForPoolRows() {
+  for (const row of poolRows) {
+    row._banlistStatus = getBanlistStatusForRow(row)
+    row._banlistIcon = getBanlistIconForRow(row)
+    row._banlistLabel = getBanlistLabelForRow(row)
+    row._deckCopyLimit = getDeckCopyLimit(row._deckKey)
+  }
 }
 
 function getDeckCopyLimit(cardKey) {
@@ -393,6 +461,161 @@ async function loadMe() {
   currentUser = data?.loggedIn && data?.user ? data.user : null
 }
 
+function syncPreviewSelection() {
+  binderGrid.querySelectorAll(".deckbuilder-pool-card.is-previewed").forEach((card) => {
+    card.classList.remove("is-previewed")
+  })
+
+  if (!previewCardKey) return
+
+  const activeCard = binderGrid.querySelector(`[data-card-key="${previewCardKey}"]`)
+  if (activeCard) activeCard.classList.add("is-previewed")
+}
+
+function resetPreviewCollections() {
+  previewTags.innerHTML = ""
+  previewTags.hidden = true
+  previewStats.innerHTML = ""
+  previewStatsSection.hidden = true
+  previewDescription.textContent = ""
+  previewTextSection.hidden = true
+}
+
+function getPreviewBadgeValues(row) {
+  const values = []
+  const highLevelType = safeText(row?._highLevelType || getHighLevelType(row))
+  const attribute = safeText(row?._rowAttributeUpper || row?.attribute).toUpperCase()
+  const race = safeText(row?._rowRace || row?.race)
+  const sectionLabel = defaultDeckSectionForRow(row) === "extra" ? "Extra Deck" : "Main Deck"
+  const banlistLabel = getBanlistLabelForRow(row)
+
+  if (highLevelType) values.push(highLevelType)
+  if (attribute) values.push(attribute)
+  if (race) values.push(race)
+  values.push(sectionLabel)
+  if (banlistLabel) values.push(banlistLabel)
+
+  return values
+}
+
+function getPreviewInfoItems(row) {
+  const items = []
+  const highLevelType = safeText(row?._highLevelType || getHighLevelType(row))
+  const typeText = safeText(row?._rowType || row?.type)
+  const raceText = safeText(row?._rowRace || row?.race)
+  const attributeText = safeText(row?._rowAttributeUpper || row?.attribute).toUpperCase()
+  const levelValue = row?._levelNum ?? toNumber(row?.level)
+  const rankValue = row?._rankNum ?? toNumber(row?.rank ?? row?.level)
+  const linkValue = row?._linkNum ?? toNumber(row?.linkval ?? row?.linkVal)
+  const scaleValue = row?._scaleNum ?? toNumber(row?.scale)
+  const linkArrows = Array.isArray(row?._linkArrows) ? row._linkArrows : getRowLinkArrows(row)
+
+  items.push({ label: "Card Type", value: typeText || highLevelType || "—" })
+
+  if (attributeText) {
+    items.push({ label: "Attribute", value: attributeText })
+  }
+
+  if (raceText) {
+    items.push({ label: highLevelType === "Monster" ? "Monster Type" : "Property", value: raceText })
+  }
+
+  if (linkValue !== null) {
+    items.push({ label: "Link", value: displayValue(linkValue) })
+  } else if (rankValue !== null && isXyzMonster(row)) {
+    items.push({ label: "Rank", value: displayValue(rankValue) })
+  } else if (levelValue !== null) {
+    items.push({ label: "Level", value: displayValue(levelValue) })
+  }
+
+  if (highLevelType === "Monster") {
+    items.push({ label: "ATK", value: displayValue(row?.atk) })
+
+    if (!isLinkMonster(row)) {
+      items.push({ label: "DEF", value: displayValue(row?.def) })
+    }
+  }
+
+  if (scaleValue !== null) {
+    items.push({ label: "Scale", value: displayValue(scaleValue) })
+  }
+
+  if (linkArrows.length) {
+    items.push({ label: "Arrows", value: linkArrows.join(", ") })
+  }
+
+  if (safeText(row?.archetype)) {
+    items.push({ label: "Archetype", value: safeText(row.archetype) })
+  }
+
+  items.push({ label: "Owned", value: `x${safeText(row?.quantity) || "1"}` })
+  items.push({ label: "Deck Limit", value: getCopyLimitLabel(previewCardKey) })
+
+  return items.filter((item) => safeText(item.value))
+}
+
+function renderPreviewBadges(row) {
+  const badges = getPreviewBadgeValues(row)
+  previewTags.innerHTML = ""
+
+  if (!badges.length) {
+    previewTags.hidden = true
+    return
+  }
+
+  const fragment = document.createDocumentFragment()
+
+  badges.forEach((value) => {
+    const badge = document.createElement("span")
+    badge.className = "deckbuilder-preview-tag"
+    badge.textContent = value
+    fragment.appendChild(badge)
+  })
+
+  previewTags.appendChild(fragment)
+  previewTags.hidden = false
+}
+
+function renderPreviewInfo(row) {
+  const items = getPreviewInfoItems(row)
+  previewStats.innerHTML = ""
+
+  if (!items.length) {
+    previewStatsSection.hidden = true
+  } else {
+    const fragment = document.createDocumentFragment()
+
+    items.forEach(({ label, value }) => {
+      const stat = document.createElement("div")
+      stat.className = "deckbuilder-preview-stat"
+
+      const term = document.createElement("span")
+      term.className = "deckbuilder-preview-stat-label"
+      term.textContent = label
+
+      const detail = document.createElement("strong")
+      detail.className = "deckbuilder-preview-stat-value"
+      detail.textContent = value
+
+      stat.append(term, detail)
+      fragment.appendChild(stat)
+    })
+
+    previewStats.appendChild(fragment)
+    previewStatsSection.hidden = false
+  }
+
+  const description = safeText(row?.desc)
+
+  if (description) {
+    previewDescription.textContent = description
+  } else {
+    previewDescription.textContent = "Description not available yet. Regenerate the binder data once to include full card text in this preview."
+  }
+
+  previewTextSection.hidden = false
+}
+
 function resetPreview() {
   previewCardKey = ""
   previewTitle.textContent = "Select a card"
@@ -402,6 +625,8 @@ function resetPreview() {
   previewImage.hidden = true
   previewEmpty.hidden = false
   previewEmpty.textContent = "No card selected yet."
+  resetPreviewCollections()
+  syncPreviewSelection()
 }
 
 function refreshPreviewPanel() {
@@ -416,9 +641,9 @@ function refreshPreviewPanel() {
     return
   }
 
-  const imageUrl = getBinderModalImage(row)
+  const imageUrl = row._previewImageLarge || getBinderModalImage(row)
   previewTitle.textContent = safeText(row.name) || "Unknown Card"
-  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(previewCardKey)} • ${getRemainingCount(previewCardKey)} left to add`
+  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getRemainingCount(previewCardKey)} left to add • ${getCopyLimitLabel(previewCardKey)}`
 
   if (imageUrl) {
     previewImage.src = imageUrl
@@ -432,6 +657,10 @@ function refreshPreviewPanel() {
     previewEmpty.hidden = false
     previewEmpty.textContent = "No image available for this card."
   }
+
+  renderPreviewBadges(row)
+  renderPreviewInfo(row)
+  syncPreviewSelection()
 }
 
 function showPreviewForRow(row) {
@@ -457,6 +686,7 @@ async function logout() {
   poolRows = []
   poolByKey = new Map()
   deckState = { main: [], extra: [] }
+  rebuildDeckUsageIndex()
   artworkPrefs = {}
   artworkPrefsPlayer = ""
   resetPreview()
@@ -545,7 +775,7 @@ async function loadArtworkManifest() {
   }
 
   const resp = await fetch("/data/generated/alt-artworks.json", {
-    cache: "no-store"
+    cache: "force-cache"
   })
 
   if (!resp.ok) {
@@ -894,21 +1124,21 @@ function syncFilterVisibility() {
 function getSortValue(row, sortKey) {
   switch (sortKey) {
     case "name":
-      return safeText(row.name).toLowerCase()
+      return row?._sortName ?? safeText(row?.name).toLowerCase()
     case "level":
-      return isXyzMonster(row) ? null : toNumber(row.level)
+      return row?._levelNum ?? (isXyzMonster(row) ? null : toNumber(row?.level))
     case "rank":
-      return isXyzMonster(row) ? toNumber(row.level) : null
+      return row?._rankNum ?? (isXyzMonster(row) ? toNumber(row?.rank ?? row?.level) : null)
     case "link":
-      return toNumber(row.linkval ?? row.linkVal)
+      return row?._linkNum ?? toNumber(row?.linkval ?? row?.linkVal)
     case "scale":
-      return toNumber(row.scale)
+      return row?._scaleNum ?? toNumber(row?.scale)
     case "atk":
-      return toNumber(row.atk)
+      return row?._atkNum ?? toNumber(row?.atk)
     case "def":
-      return toNumber(row.def)
+      return row?._defNum ?? toNumber(row?.def)
     default:
-      return safeText(row.name).toLowerCase()
+      return row?._sortName ?? safeText(row?.name).toLowerCase()
   }
 }
 
@@ -956,7 +1186,7 @@ function applyBinderFilters(rows) {
   const selectedRace = safeText(filterRace.value)
   const selectedSpellType = safeText(filterSpellType.value)
   const selectedTrapType = safeText(filterTrapType.value)
-  const selectedSubtypes = getSelectedSubtypeValues()
+  const selectedSubtypes = getSelectedSubtypeValues().map((value) => value.toLowerCase())
 
   const atkExact = toNumber(filterAtkExact.value)
   const minAtk = toNumber(filterAtkMin.value)
@@ -983,53 +1213,40 @@ function applyBinderFilters(rows) {
   const useTrapFilters = isTrapFilterMode()
 
   const filtered = rows.filter((row) => {
-    const searchable = [
-      row.name,
-      row.set_name,
-      row.set_code,
-      row.rarity,
-      row.edition,
-      row.type,
-      row.race,
-      row.attribute,
-      row.archetype
-    ].map(safeText).join(" ").toLowerCase()
-
-    const rowAttribute = safeText(row.attribute).toUpperCase()
-    const rowType = safeText(row.type)
-    const rowRace = safeText(row.race)
-
-    const rawLevel = toNumber(row.level)
-    const rowAtk = toNumber(row.atk)
-    const rowDef = toNumber(row.def)
-    const rowLevel = isXyzMonster(row) ? null : rawLevel
-    const rowRank = isXyzMonster(row) ? rawLevel : null
-    const rowLink = isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null
-    const rowScale = toNumber(row.scale)
-    const rowLinkArrows = getRowLinkArrows(row)
+    const searchable = row._searchText || ""
+    const rowAttribute = row._rowAttributeUpper || safeText(row.attribute).toUpperCase()
+    const rowType = row._rowType || safeText(row.type)
+    const rowRace = row._rowRace || safeText(row.race)
+    const rowHighLevelType = row._highLevelType || getHighLevelType(row)
+    const rowAtk = row._atkNum ?? toNumber(row.atk)
+    const rowDef = row._defNum ?? toNumber(row.def)
+    const rowLevel = row._levelNum ?? (isXyzMonster(row) ? null : toNumber(row.level))
+    const rowRank = row._rankNum ?? (isXyzMonster(row) ? toNumber(row.rank ?? row.level) : null)
+    const rowLink = row._linkNum ?? (isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null)
+    const rowScale = row._scaleNum ?? toNumber(row.scale)
+    const rowLinkArrows = row._linkArrows || getRowLinkArrows(row)
 
     if (searchTerms.length > 0) {
       const matchesAnySearchTerm = searchTerms.some((term) => searchable.includes(term))
       if (!matchesAnySearchTerm) return false
     }
 
-    if (selectedType && getHighLevelType(row) !== selectedType) return false
+    if (selectedType && rowHighLevelType !== selectedType) return false
 
     if (useSpellFilters && selectedSpellType) {
-      if (getHighLevelType(row) !== "Spell" || rowRace !== selectedSpellType) return false
+      if (rowHighLevelType !== "Spell" || rowRace !== selectedSpellType) return false
     }
 
     if (useTrapFilters && selectedTrapType) {
-      if (getHighLevelType(row) !== "Trap" || rowRace !== selectedTrapType) return false
+      if (rowHighLevelType !== "Trap" || rowRace !== selectedTrapType) return false
     }
 
     if (useMonsterFilters && selectedAttribute && rowAttribute !== selectedAttribute) return false
     if (useMonsterFilters && selectedRace && rowRace !== selectedRace) return false
 
     if (useMonsterFilters && selectedSubtypes.length > 0) {
-      const matchesAllSelectedSubtypes = selectedSubtypes.every((subtype) =>
-        rowType.toLowerCase().includes(subtype.toLowerCase())
-      )
+      const loweredType = rowType.toLowerCase()
+      const matchesAllSelectedSubtypes = selectedSubtypes.every((subtype) => loweredType.includes(subtype))
       if (!matchesAllSelectedSubtypes) return false
     }
 
@@ -1108,8 +1325,7 @@ function resolveTargetSection(row, requestedTarget = "") {
 }
 
 function getUsedCount(cardKey) {
-  return deckState.main.filter((value) => value === cardKey).length
-    + deckState.extra.filter((value) => value === cardKey).length
+  return deckUsageByKey.get(cardKey) || 0
 }
 
 function getOwnedCount(cardKey) {
@@ -1158,6 +1374,8 @@ function getAddBlockedReason(cardKey, requestedTarget = "") {
 }
 
 function saveDeckState() {
+  rebuildDeckUsageIndex()
+
   const key = getStorageKey()
   if (!key) return
 
@@ -1194,12 +1412,14 @@ function sanitizeDeckState(candidate) {
   }
 
   deckState = next
+  rebuildDeckUsageIndex()
 }
 
 function loadStoredDeckState() {
   const key = getStorageKey()
   if (!key) {
     deckState = { main: [], extra: [] }
+    rebuildDeckUsageIndex()
     return
   }
 
@@ -1207,6 +1427,7 @@ function loadStoredDeckState() {
     const raw = localStorage.getItem(key)
     if (!raw) {
       deckState = { main: [], extra: [] }
+      rebuildDeckUsageIndex()
       return
     }
 
@@ -1214,6 +1435,47 @@ function loadStoredDeckState() {
     sanitizeDeckState(parsed)
   } catch {
     deckState = { main: [], extra: [] }
+    rebuildDeckUsageIndex()
+  }
+}
+
+function decoratePoolRow(row) {
+  const levelValue = toNumber(row.level)
+  const rankValue = toNumber(row.rank)
+  const isXyz = isXyzMonster(row)
+  const isLink = isLinkMonster(row)
+  const previewImageSmall = getBinderPreviewImage(row)
+  const previewImageLarge = getBinderModalImage(row)
+  const rowType = safeText(row.type)
+  const rowRace = safeText(row.race)
+  const rowAttributeUpper = safeText(row.attribute).toUpperCase()
+
+  return {
+    ...row,
+    quantity: Math.max(1, toNumber(row.quantity) || 1),
+    _highLevelType: getHighLevelType(row),
+    _rowType: rowType,
+    _rowTypeLower: rowType.toLowerCase(),
+    _rowRace: rowRace,
+    _rowAttributeUpper: rowAttributeUpper,
+    _atkNum: toNumber(row.atk),
+    _defNum: toNumber(row.def),
+    _levelNum: isXyz ? null : levelValue,
+    _rankNum: isXyz ? (rankValue ?? levelValue) : rankValue,
+    _linkNum: isLink ? toNumber(row.linkval ?? row.linkVal) : null,
+    _scaleNum: toNumber(row.scale),
+    _linkArrows: getRowLinkArrows(row),
+    _sortName: safeText(row.name).toLowerCase(),
+    _searchText: [
+      row.name,
+      row.type,
+      row.race,
+      row.attribute,
+      row.archetype,
+      row.desc
+    ].map(safeText).join(" ").toLowerCase(),
+    _previewImageSmall: previewImageSmall,
+    _previewImageLarge: previewImageLarge
   }
 }
 
@@ -1227,7 +1489,7 @@ function buildPoolRows(rows) {
 
     if (!cardKey) continue
 
-    const quantity = toNumber(rawRow?.quantity) || 1
+    const quantity = Math.max(1, toNumber(rawRow?.quantity) || 1)
     const setCode = safeText(rawRow?.set_code)
 
     if (!byKey.has(cardKey)) {
@@ -1245,20 +1507,23 @@ function buildPoolRows(rows) {
     existing.quantity = (toNumber(existing.quantity) || 0) + quantity
     existing._duplicateRows += 1
     if (setCode) existing._setCodes.add(setCode)
+    if (!safeText(existing.desc) && safeText(rawRow?.desc)) existing.desc = safeText(rawRow.desc)
+    if (!safeText(existing.image) && safeText(rawRow?.image)) existing.image = safeText(rawRow.image)
   }
 
   poolRows = Array.from(byKey.values()).map((row) => {
     const setCodes = Array.from(row._setCodes || [])
     const primarySetCode = setCodes[0] || safeText(row.set_code)
 
-    return {
+    return decoratePoolRow({
       ...row,
       set_code: primarySetCode,
       _setCodes: setCodes
-    }
+    })
   })
 
   poolByKey = new Map(poolRows.map((row) => [row._deckKey, row]))
+  refreshBanlistStateForPoolRows()
 }
 
 async function loadPlayerContext() {
@@ -1268,6 +1533,7 @@ async function loadPlayerContext() {
     poolRows = []
     poolByKey = new Map()
     deckState = { main: [], extra: [] }
+    rebuildDeckUsageIndex()
     resetPreview()
     renderAll()
     return
@@ -1279,7 +1545,6 @@ async function loadPlayerContext() {
 
   const [binderResp] = await Promise.all([
     fetch(`/api/deckbuilder/binder?player=${encodeURIComponent(currentPlayer)}`, {
-      cache: "no-store",
       credentials: "same-origin"
     }),
     loadArtworkManifest().catch(() => ({})),
@@ -1293,6 +1558,8 @@ async function loadPlayerContext() {
 
   if (binderResp.status === 401) {
     currentUser = null
+    deckState = { main: [], extra: [] }
+    rebuildDeckUsageIndex()
     renderAuth()
     buildTabs()
     renderAccessState()
@@ -1311,7 +1578,7 @@ async function loadPlayerContext() {
   currentPlayer = safeText(data?.player) || currentPlayer
   buildTabs()
   buildPoolRows(binderRows)
-  currentBinderRows = poolRows.slice()
+  currentBinderRows = poolRows
   loadStoredDeckState()
 
   if (!previewCardKey || !poolByKey.has(previewCardKey)) {
@@ -1358,6 +1625,58 @@ function clearDeckState() {
   renderAll()
 }
 
+function buildPoolCard(row) {
+  const cardKey = row._deckKey
+  const previewImageUrl = row._previewImageSmall || getBinderPreviewImage(row)
+  const usedCount = getUsedCount(cardKey)
+  const remainingCount = getRemainingCount(cardKey)
+  const banlistIcon = row._banlistIcon || getBanlistIconForRow(row)
+  const banlistLabel = row._banlistLabel || getBanlistLabelForRow(row)
+  const atLimit = !!getAddBlockedReason(cardKey)
+  const card = document.createElement("button")
+  card.type = "button"
+  card.className = `binder-card deckbuilder-pool-card${previewCardKey === cardKey ? " is-previewed" : ""}${atLimit ? " is-at-limit" : ""}`
+  card.dataset.cardKey = cardKey
+  card.setAttribute("aria-label", `${safeText(row.name) || "Unknown Card"}. Left click to preview, right click to add.`)
+
+  card.innerHTML = `
+    <div class="binder-image-shell">
+      ${previewImageUrl
+        ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" decoding="async" />`
+        : '<div class="binder-no-image">No Image</div>'}
+      ${banlistIcon
+        ? `<span class="binder-banlist-badge"><img src="${banlistIcon}" alt="${banlistLabel || "Banlist status"}" class="binder-banlist-icon" loading="lazy" decoding="async" /></span>`
+        : ""}
+      <span class="binder-qty">x${safeText(row.quantity) || "1"}</span>
+      ${usedCount > 0 ? `<span class="deckbuilder-used-pill">Used ${usedCount}</span>` : ""}
+    </div>
+    <div class="deckbuilder-card-copy">
+      <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
+      <div class="deckbuilder-card-subtitle">${remainingCount} left to add • ${getCopyLimitLabel(cardKey)}</div>
+    </div>
+  `
+
+  return card
+}
+
+function renderPoolChunk(rows, startIndex, token) {
+  if (token !== currentPoolRenderToken) return
+
+  const endIndex = Math.min(startIndex + POOL_RENDER_CHUNK_SIZE, rows.length)
+  const fragment = document.createDocumentFragment()
+
+  for (let index = startIndex; index < endIndex; index += 1) {
+    fragment.appendChild(buildPoolCard(rows[index]))
+  }
+
+  binderGrid.appendChild(fragment)
+  syncPreviewSelection()
+
+  if (endIndex < rows.length) {
+    scheduleChunk(() => renderPoolChunk(rows, endIndex, token))
+  }
+}
+
 function renderPool() {
   const filtered = applyBinderFilters(currentBinderRows)
   const totalCopies = filtered.reduce((sum, row) => sum + (toNumber(row.quantity) || 1), 0)
@@ -1365,73 +1684,52 @@ function renderPool() {
   binderStatus.textContent = `Showing ${totalCopies} copies across ${filtered.length} unique cards`
   binderGrid.innerHTML = ""
 
-  if (previewCardKey && !poolByKey.has(previewCardKey)) {
-    resetPreview()
-  }
-
   if (!filtered.length) {
-    binderGrid.innerHTML = '<p class="muted">No cards matched your filters.</p>'
+    currentPoolRenderToken += 1
+    binderGrid.innerHTML = '<div class="binder-empty">No cards matched the current filters.</div>'
+    if (!poolByKey.has(previewCardKey)) {
+      resetPreview()
+    }
     return
   }
 
-  filtered.forEach((row) => {
-    const cardKey = row._deckKey
-    const previewImageUrl = getBinderPreviewImage(row)
-    const usedCount = getUsedCount(cardKey)
-    const remainingCount = getRemainingCount(cardKey)
-    const banlistIcon = getBanlistIconForRow(row)
-    const banlistLabel = getBanlistLabelForRow(row)
-
-    const card = document.createElement("article")
-    card.className = `binder-card deckbuilder-pool-card${cardKey === previewCardKey ? " is-previewed" : ""}`
-    card.tabIndex = 0
-    card.setAttribute("role", "button")
-    card.setAttribute("aria-label", `${safeText(row.name) || "Card"}. Left click to preview, right click to add.`)
-    card.title = "Left click to preview. Right click to add."
-
-    card.innerHTML = `
-      <div class="binder-image-wrap">
-        ${previewImageUrl
-          ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" />`
-          : '<div class="binder-no-image">No Image</div>'}
-        ${banlistIcon
-          ? `<span class="binder-banlist-badge"><img src="${banlistIcon}" alt="${banlistLabel || "Banlist status"}" class="binder-banlist-icon" loading="lazy" /></span>`
-          : ""}
-        <span class="binder-qty">x${safeText(row.quantity) || "1"}</span>
-        ${usedCount > 0 ? `<span class="deckbuilder-used-pill">Used ${usedCount}</span>` : ""}
-      </div>
-      <div class="deckbuilder-card-copy">
-        <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-        <div class="deckbuilder-card-subtitle">${remainingCount} left to add • ${getCopyLimitLabel(cardKey)}</div>
-      </div>
-    `
-
-    card.addEventListener("click", () => {
-      showPreviewForRow(row)
-      renderPool()
-    })
-
-    card.addEventListener("contextmenu", (event) => {
-      event.preventDefault()
-      addCardToSection(cardKey)
-    })
-
-    card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault()
-        showPreviewForRow(row)
-        renderPool()
-      }
-
-      if (event.key === " ") {
-        event.preventDefault()
-        addCardToSection(cardKey)
-      }
-    })
-
-    binderGrid.appendChild(card)
-  })
+  const token = ++currentPoolRenderToken
+  renderPoolChunk(filtered, 0, token)
 }
+
+binderGrid.addEventListener("click", (event) => {
+  const card = event.target.closest(".deckbuilder-pool-card")
+  if (!card || !binderGrid.contains(card)) return
+
+  const row = poolByKey.get(card.dataset.cardKey || "")
+  if (!row) return
+
+  showPreviewForRow(row)
+})
+
+binderGrid.addEventListener("contextmenu", (event) => {
+  const card = event.target.closest(".deckbuilder-pool-card")
+  if (!card || !binderGrid.contains(card)) return
+
+  event.preventDefault()
+  addCardToSection(card.dataset.cardKey || "")
+})
+
+binderGrid.addEventListener("keydown", (event) => {
+  const card = event.target.closest(".deckbuilder-pool-card")
+  if (!card || !binderGrid.contains(card)) return
+
+  if (event.key === "Enter") {
+    event.preventDefault()
+    const row = poolByKey.get(card.dataset.cardKey || "")
+    if (row) showPreviewForRow(row)
+  }
+
+  if (event.key === " ") {
+    event.preventDefault()
+    addCardToSection(card.dataset.cardKey || "")
+  }
+})
 
 function collapseSection(section) {
   const counts = new Map()
@@ -1474,10 +1772,10 @@ function renderSection(section, container, labelElement) {
     item.innerHTML = `
       <button type="button" class="deckbuilder-section-preview" data-action="preview">
         ${previewImageUrl
-          ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="deckbuilder-section-thumb" loading="lazy" />`
+          ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="deckbuilder-section-thumb" loading="lazy" decoding="async" />`
           : '<span class="deckbuilder-section-thumb deckbuilder-section-thumb-empty">No image</span>'}
         ${banlistIcon
-          ? `<span class="binder-banlist-badge"><img src="${banlistIcon}" alt="${banlistLabel || "Banlist status"}" class="binder-banlist-icon" loading="lazy" /></span>`
+          ? `<span class="binder-banlist-badge"><img src="${banlistIcon}" alt="${banlistLabel || "Banlist status"}" class="binder-banlist-icon" loading="lazy" decoding="async" /></span>`
           : ""}
       </button>
       <div class="deckbuilder-section-copy">
@@ -1493,7 +1791,6 @@ function renderSection(section, container, labelElement) {
 
     item.querySelector('[data-action="preview"]').addEventListener("click", () => {
       showPreviewForRow(row)
-      renderPool()
     })
 
     item.querySelector('[data-action="minus"]').addEventListener("click", () => {
@@ -1578,7 +1875,9 @@ function renderAll() {
   renderSection("extra", extraList, extraSectionLabel)
 }
 
-binderSearch.addEventListener("input", () => renderPool())
+const debouncedPoolRender = debounce(() => renderPool(), 140)
+
+binderSearch.addEventListener("input", debouncedPoolRender)
 filterType.addEventListener("change", () => {
   syncFilterVisibility()
   renderPool()
@@ -1590,24 +1889,24 @@ filterTrapType.addEventListener("change", () => renderPool())
 filterSubtypes.addEventListener("change", (event) => {
   if (event.target.matches('input[type="checkbox"]')) renderPool()
 })
-filterAtkExact.addEventListener("input", () => renderPool())
-filterAtkMin.addEventListener("input", () => renderPool())
-filterAtkMax.addEventListener("input", () => renderPool())
-filterDefExact.addEventListener("input", () => renderPool())
-filterDefMin.addEventListener("input", () => renderPool())
-filterDefMax.addEventListener("input", () => renderPool())
-filterLevelExact.addEventListener("input", () => renderPool())
-filterLevelMin.addEventListener("input", () => renderPool())
-filterLevelMax.addEventListener("input", () => renderPool())
-filterRankExact.addEventListener("input", () => renderPool())
-filterRankMin.addEventListener("input", () => renderPool())
-filterRankMax.addEventListener("input", () => renderPool())
-filterLinkExact.addEventListener("input", () => renderPool())
-filterLinkMin.addEventListener("input", () => renderPool())
-filterLinkMax.addEventListener("input", () => renderPool())
-filterScaleExact.addEventListener("input", () => renderPool())
-filterScaleMin.addEventListener("input", () => renderPool())
-filterScaleMax.addEventListener("input", () => renderPool())
+filterAtkExact.addEventListener("input", debouncedPoolRender)
+filterAtkMin.addEventListener("input", debouncedPoolRender)
+filterAtkMax.addEventListener("input", debouncedPoolRender)
+filterDefExact.addEventListener("input", debouncedPoolRender)
+filterDefMin.addEventListener("input", debouncedPoolRender)
+filterDefMax.addEventListener("input", debouncedPoolRender)
+filterLevelExact.addEventListener("input", debouncedPoolRender)
+filterLevelMin.addEventListener("input", debouncedPoolRender)
+filterLevelMax.addEventListener("input", debouncedPoolRender)
+filterRankExact.addEventListener("input", debouncedPoolRender)
+filterRankMin.addEventListener("input", debouncedPoolRender)
+filterRankMax.addEventListener("input", debouncedPoolRender)
+filterLinkExact.addEventListener("input", debouncedPoolRender)
+filterLinkMin.addEventListener("input", debouncedPoolRender)
+filterLinkMax.addEventListener("input", debouncedPoolRender)
+filterScaleExact.addEventListener("input", debouncedPoolRender)
+filterScaleMin.addEventListener("input", debouncedPoolRender)
+filterScaleMax.addEventListener("input", debouncedPoolRender)
 filterLinkArrows.addEventListener("change", (event) => {
   if (event.target.matches('input[type="checkbox"]')) renderPool()
 })

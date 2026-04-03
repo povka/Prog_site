@@ -90,6 +90,73 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function normalizeCardId(value) {
+  const raw = safeText(value);
+  if (!raw) return "";
+
+  const digitsOnly = raw.replace(/\D+/g, "");
+  if (!digitsOnly) return "";
+
+  return String(Number(digitsOnly));
+}
+
+function buildDeckbuilderBinderRows(rows = []) {
+  const byKey = new Map();
+
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const cardKey = normalizeCardId(
+      row?.cardid || row?.cardId || row?.id || row?.passcode || row?.image_id || row?.imageId
+    );
+
+    if (!cardKey) continue;
+
+    const quantity = Math.max(1, toNumber(row?.quantity ?? row?.count) ?? 1);
+    const nextRow = {
+      cardid: Number(cardKey),
+      name: safeText(row?.name) || "Unknown Card",
+      quantity,
+      type: safeText(row?.type) || null,
+      frameType: safeText(row?.frameType) || null,
+      desc: safeText(row?.desc) || "",
+      race: safeText(row?.race) || null,
+      attribute: safeText(row?.attribute) || null,
+      level: toNumber(row?.level),
+      rank: toNumber(row?.rank),
+      atk: row?.atk ?? null,
+      def: row?.def ?? null,
+      linkval: toNumber(row?.linkval ?? row?.linkVal),
+      linkmarkers: Array.isArray(row?.linkmarkers) ? row.linkmarkers : (row?.linkmarkers ?? null),
+      scale: toNumber(row?.scale),
+      archetype: safeText(row?.archetype) || null,
+      image_id: toNumber(row?.image_id ?? row?.imageId ?? cardKey) ?? Number(cardKey),
+      image: safeText(row?.image) || (cardKey ? `images/cards/${cardKey}.jpg` : null)
+    };
+
+    if (!byKey.has(cardKey)) {
+      byKey.set(cardKey, nextRow);
+      continue;
+    }
+
+    const existing = byKey.get(cardKey);
+    existing.quantity += quantity;
+
+    for (const [field, value] of Object.entries(nextRow)) {
+      if (field === "quantity") continue;
+      const currentValue = existing[field];
+      const hasCurrentValue = Array.isArray(currentValue) ? currentValue.length > 0 : currentValue !== null && currentValue !== undefined && currentValue !== "";
+      const hasNextValue = Array.isArray(value) ? value.length > 0 : value !== null && value !== undefined && value !== "";
+
+      if (!hasCurrentValue && hasNextValue) {
+        existing[field] = value;
+      }
+    }
+  }
+
+  return Array.from(byKey.values()).sort((a, b) =>
+    safeText(a.name).localeCompare(safeText(b.name), undefined, { sensitivity: "base" })
+  );
+}
+
 function getCardImageUrl(row, origin) {
   const directImage = safeText(row?.image);
   if (directImage) {
@@ -821,10 +888,7 @@ export default {
 
       const assetUrl = new URL(`/data/generated/${player}.json`, url.origin);
       const binderResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), {
-        method: "GET",
-        headers: {
-          "cache-control": "no-store"
-        }
+        method: "GET"
       }));
 
       if (!binderResponse.ok) {
@@ -842,7 +906,11 @@ export default {
         ok: true,
         player,
         players: allowedPlayers,
-        binder: Array.isArray(binder) ? binder : []
+        binder: buildDeckbuilderBinderRows(binder)
+      }, {
+        headers: {
+          "cache-control": "private, max-age=120, stale-while-revalidate=600"
+        }
       });
     }
 

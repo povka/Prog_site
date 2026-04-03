@@ -2678,3 +2678,160 @@ p{color:var(--ink-soft)}
     grid-template-columns:1fr;
   }
 }
+
+/* deckbuilder v8 performance + preview info */
+.deckbuilder-body{
+  --deckbuilder-preview-width:390px;
+}
+
+.deckbuilder-pool-grid{
+  content-visibility:auto;
+  contain-intrinsic-size:1100px;
+}
+
+.deckbuilder-pool-card{
+  content-visibility:auto;
+  contain-intrinsic-size:280px;
+  transition:transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.deckbuilder-pool-card.is-at-limit{
+  opacity:0.82;
+}
+
+.deckbuilder-preview-card{
+  display:block;
+  padding:0;
+  overflow:hidden;
+}
+
+.deckbuilder-preview-scroll{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  height:100%;
+  min-height:0;
+  padding:20px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+
+.deckbuilder-preview-card h2{
+  font-size:clamp(1.12rem, 1.28vw, 1.52rem);
+  line-height:1.12;
+}
+
+.deckbuilder-preview-subtitle{
+  margin:10px 0 0;
+  font-size:0.88rem;
+  line-height:1.45;
+}
+
+.deckbuilder-preview-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+
+.deckbuilder-preview-tag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:5px 10px;
+  border:1px solid rgba(94,200,255,0.22);
+  border-radius:999px;
+  background:rgba(94,200,255,0.08);
+  color:#eef5ff;
+  font-size:0.73rem;
+  font-weight:800;
+  letter-spacing:0.03em;
+}
+
+.deckbuilder-preview-image-shell{
+  flex:none;
+  max-height:470px;
+  aspect-ratio:421 / 614;
+  padding:14px;
+}
+
+.deckbuilder-preview-image{
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+}
+
+.deckbuilder-preview-section{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.deckbuilder-preview-section .section-label{
+  margin:0;
+}
+
+.deckbuilder-preview-stats{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.deckbuilder-preview-stat{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+  padding:12px 13px;
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:14px;
+  background:rgba(255,255,255,0.04);
+}
+
+.deckbuilder-preview-stat-label{
+  color:var(--ink-soft);
+  font-size:0.72rem;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+.deckbuilder-preview-stat-value{
+  color:#f7fbff;
+  font-size:0.94rem;
+  line-height:1.35;
+  word-break:break-word;
+}
+
+.deckbuilder-preview-description{
+  margin:0;
+  padding:14px;
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:16px;
+  background:rgba(255,255,255,0.04);
+  color:#e4ebff;
+  font-size:0.9rem;
+  line-height:1.58;
+  white-space:pre-line;
+}
+
+@media (max-width: 1460px){
+  .deckbuilder-preview-scroll{
+    height:auto;
+    max-height:none;
+  }
+
+  .deckbuilder-preview-image-shell{
+    max-height:none;
+    aspect-ratio:auto;
+    min-height:360px;
+  }
+}
+
+@media (max-width: 700px){
+  .deckbuilder-preview-stats{
+    grid-template-columns:1fr;
+  }
+}

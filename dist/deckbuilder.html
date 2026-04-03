@@ -9,15 +9,28 @@
 <body class="deckbuilder-body">
   <aside class="deckbuilder-preview-rail" aria-live="polite">
     <div class="deckbuilder-preview-card">
-      <div>
-        <p class="eyebrow">Card Preview</p>
-        <h2 id="previewTitle">Select a card</h2>
-        <p id="previewSubtitle" class="deckbuilder-preview-subtitle">Left click a card to preview it here. Right click a card to add it to your deck.</p>
-      </div>
+      <div class="deckbuilder-preview-scroll">
+        <div>
+          <p class="eyebrow">Card Preview</p>
+          <h2 id="previewTitle">Select a card</h2>
+          <p id="previewSubtitle" class="deckbuilder-preview-subtitle">Left click a card to preview it here. Right click a card to add it to your deck.</p>
+          <div id="previewTags" class="deckbuilder-preview-tags" hidden></div>
+        </div>
 
-      <div class="deckbuilder-preview-image-shell">
-        <img id="previewImage" class="deckbuilder-preview-image" src="" alt="" hidden />
-        <div id="previewEmpty" class="deckbuilder-preview-empty">No card selected yet.</div>
+        <div class="deckbuilder-preview-image-shell">
+          <img id="previewImage" class="deckbuilder-preview-image" src="" alt="" hidden />
+          <div id="previewEmpty" class="deckbuilder-preview-empty">No card selected yet.</div>
+        </div>
+
+        <section id="previewStatsSection" class="deckbuilder-preview-section" hidden>
+          <p class="section-label">Card Info</p>
+          <div id="previewStats" class="deckbuilder-preview-stats"></div>
+        </section>
+
+        <section id="previewTextSection" class="deckbuilder-preview-section" hidden>
+          <p class="section-label">Description</p>
+          <div id="previewDescription" class="deckbuilder-preview-description"></div>
+        </section>
       </div>
     </div>
   </aside>
@@ -57,7 +70,7 @@
                 type="text"
                 id="binderSearch"
                 class="deck-search"
-                placeholder="Search card name, type, archetype - use | for multiple cards"
+                placeholder="Search card name, type, archetype, or text - use | for multiple cards"
               />
 
               <div class="settings-auth-box deckbuilder-auth-box">
@@ -195,7 +208,7 @@
                         </div>
                       </div>
 
-                      <div class="binder-controls-stats-row monster-filter-row">
+                      <div class="binder-controls-compact-row monster-filter-row">
                         <input type="number" id="filterAtkExact" class="deck-search" placeholder="ATK" />
                         <input type="number" id="filterAtkMin" class="deck-search" placeholder="Min ATK" />
                         <input type="number" id="filterAtkMax" class="deck-search" placeholder="Max ATK" />
@@ -205,7 +218,7 @@
                         <input type="number" id="filterDefMax" class="deck-search" placeholder="Max DEF" />
                       </div>
 
-                      <div class="binder-controls-progression-row monster-filter-row">
+                      <div class="binder-controls-level-row monster-filter-row">
                         <input type="number" id="filterLevelExact" class="deck-search" placeholder="Level" />
                         <input type="number" id="filterLevelMin" class="deck-search" placeholder="Min level" />
                         <input type="number" id="filterLevelMax" class="deck-search" placeholder="Max level" />
