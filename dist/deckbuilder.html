@@ -63,13 +63,13 @@
               <div class="settings-auth-box deckbuilder-auth-box">
                 <div class="settings-auth-actions settings-auth-actions-single">
                   <a href="/auth/discord/login?returnTo=%2Fdeckbuilder.html" id="loginButton" class="button button-primary">Log in with Discord</a>
-                  <button type="button" id="logoutButton" class="button button-secondary" style="display:none;">Log out</button>
                 </div>
 
                 <div id="deckAuthActions" class="deckbuilder-auth-secondary" hidden>
-                  <button type="button" id="exportButton" class="button button-primary">Export .ydk</button>
-                  <button type="button" id="clearDeckButton" class="button button-secondary">Clear deck</button>
-                  <p id="exportHint" class="muted deckbuilder-export-hint">Your draft is empty.</p>
+                  <button type="button" id="exportButton" class="button button-primary" hidden>Export .ydk</button>
+                  <button type="button" id="clearDeckButton" class="button button-secondary" hidden>Clear deck</button>
+                  <button type="button" id="logoutButton" class="button button-secondary" style="display:none;">Log out</button>
+                  <p id="exportHint" class="muted deckbuilder-export-hint" hidden>Your draft is empty.</p>
                 </div>
               </div>
 
@@ -82,11 +82,15 @@
               <div class="deckbuilder-actions-row">
                 <div class="deckbuilder-filters-box">
                   <div class="binder-controls-sort-top-row deckbuilder-filters-top-row">
-                    <div class="binder-controls-sort-left">
+                    <div class="deckbuilder-filter-heading">
                       <span class="section-label">Filters</span>
+
+                      <select id="deckBanlist" class="deck-select" aria-label="Active banlist">
+                        <option value="Pharaoh's Servant.conf">Pharaoh's Servant</option>
+                      </select>
                     </div>
 
-                    <div class="binder-controls-sort-box">
+                    <div class="binder-controls-sort-box deckbuilder-sort-box">
                       <select id="binderSort" class="deck-select">
                         <option value="name">Name</option>
                         <option value="level">Level</option>

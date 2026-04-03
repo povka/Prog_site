@@ -2103,6 +2103,10 @@ p{color:var(--ink-soft)}
   width:100%;
 }
 
+.deckbuilder-auth-secondary [hidden]{
+  display:none !important;
+}
+
 .deckbuilder-shell{
   display:flex;
   flex-direction:column;
@@ -2530,8 +2534,31 @@ p{color:var(--ink-soft)}
 }
 
 .deckbuilder-filters-top-row{
-  grid-template-columns:minmax(0, 1fr);
+  grid-template-columns:minmax(0, 1fr) auto;
+  gap:16px;
+  align-items:stretch;
+}
+
+.deckbuilder-filter-heading{
+  display:grid;
+  grid-template-columns:auto minmax(240px, 1fr);
   gap:12px;
+  align-items:center;
+  min-width:0;
+}
+
+.deckbuilder-filter-heading .section-label{
+  white-space:nowrap;
+}
+
+.deckbuilder-filter-heading .deck-select{
+  min-width:0;
+}
+
+.deckbuilder-sort-box{
+  width:auto;
+  min-width:min(100%, 440px);
+  justify-self:end;
 }
 
 .deckbuilder-pool-grid{
@@ -2620,6 +2647,17 @@ p{color:var(--ink-soft)}
 @media (max-width: 920px){
   .deckbuilder-actions-row{
     grid-template-columns:1fr;
+  }
+
+  .deckbuilder-filters-top-row,
+  .deckbuilder-filter-heading{
+    grid-template-columns:1fr;
+  }
+
+  .deckbuilder-sort-box{
+    width:100%;
+    min-width:0;
+    justify-self:stretch;
   }
 
   .deckbuilder-pool-grid{

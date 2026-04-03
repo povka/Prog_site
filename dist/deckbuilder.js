@@ -7,10 +7,14 @@ const PLAYERS = [
 
 const IMAGE_VERSION = "2"
 const STORAGE_PREFIX = "prog_deckbuilder_"
+const MAX_COPIES_PER_DECK = 3
 const DECK_LIMITS = {
   main: 60,
   extra: 15
 }
+const BANLISTS_BASE_PATH = "/data/Banlists"
+const BANLIST_MANIFEST_PATH = `${BANLISTS_BASE_PATH}/banlists.json`
+const FALLBACK_BANLIST_FILE = "Pharaoh's Servant.conf"
 
 let currentUser = null
 let currentPlayer = ""
@@ -25,6 +29,8 @@ let artworkManifestByImageId = {}
 let binderSortDirection = "asc"
 let binderFiltersCollapsed = true
 let previewCardKey = ""
+let activeBanlistFile = FALLBACK_BANLIST_FILE
+let banlistLimitById = new Map()
 let deckState = {
   main: [],
   extra: []
@@ -81,6 +87,7 @@ const binderFiltersPanel = document.getElementById("binderFiltersPanel")
 const toggleFiltersButton = document.getElementById("toggleFiltersButton")
 const binderSort = document.getElementById("binderSort")
 const binderSortDirectionButton = document.getElementById("binderSortDirection")
+const deckBanlist = document.getElementById("deckBanlist")
 
 function safeText(value) {
   return value ? String(value).trim() : ""
@@ -122,8 +129,171 @@ function formatYdkCardId(value) {
   return normalized.length < 8 ? normalized.padStart(8, "0") : normalized
 }
 
+function formatBanlistLabel(fileName) {
+  return safeText(fileName).replace(/\.conf$/i, "")
+}
+
+function setBanlistOptions(files, defaultFile) {
+  const normalizedFiles = Array.from(
+    new Set(
+      (files || [])
+        .map((file) => safeText(file))
+        .filter((file) => file && /\.conf$/i.test(file))
+    )
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+
+  if (!normalizedFiles.length) {
+    normalizedFiles.push(FALLBACK_BANLIST_FILE)
+  }
+
+  const selectedFile = normalizedFiles.includes(defaultFile)
+    ? defaultFile
+    : normalizedFiles.includes(FALLBACK_BANLIST_FILE)
+      ? FALLBACK_BANLIST_FILE
+      : normalizedFiles[0]
+
+  deckBanlist.innerHTML = ""
+
+  normalizedFiles.forEach((fileName) => {
+    const option = document.createElement("option")
+    option.value = fileName
+    option.textContent = formatBanlistLabel(fileName)
+    deckBanlist.appendChild(option)
+  })
+
+  deckBanlist.value = selectedFile
+  activeBanlistFile = selectedFile
+}
+
+async function loadBanlistManifest() {
+  try {
+    const res = await fetch(BANLIST_MANIFEST_PATH, { cache: "no-store" })
+    if (!res.ok) throw new Error("Failed to load banlist manifest")
+
+    const manifest = await res.json()
+    const files = Array.isArray(manifest.files) ? manifest.files : []
+    const defaultFile = safeText(manifest.default) || FALLBACK_BANLIST_FILE
+
+    setBanlistOptions(files, defaultFile)
+  } catch {
+    setBanlistOptions([FALLBACK_BANLIST_FILE], FALLBACK_BANLIST_FILE)
+  }
+}
+
+function parseBanlistConfig(content) {
+  const map = new Map()
+  const lines = String(content || "").split(/\r?\n/)
+
+  let currentSection = ""
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    if (line.startsWith("#")) {
+      currentSection = line.slice(1).trim().toLowerCase()
+      continue
+    }
+
+    if (line.startsWith("!") || line.startsWith("--") || line.startsWith("$")) {
+      continue
+    }
+
+    const match = line.match(/^(\d+)\s+(\d+)/)
+    if (!match) continue
+
+    const cardId = normalizeCardId(match[1])
+    const count = Number(match[2])
+
+    if (!cardId || !Number.isFinite(count)) continue
+
+    let limit = null
+
+    if (currentSection === "forbidden" || count === 0) {
+      limit = 0
+    } else if (currentSection === "limited" || count === 1) {
+      limit = 1
+    } else if (
+      currentSection === "semi-limited" ||
+      currentSection === "semilimited" ||
+      count === 2
+    ) {
+      limit = 2
+    } else {
+      limit = Math.max(0, Math.min(MAX_COPIES_PER_DECK, count))
+    }
+
+    map.set(cardId, limit)
+  }
+
+  return map
+}
+
+async function loadBanlistData(fileName = deckBanlist.value || activeBanlistFile || FALLBACK_BANLIST_FILE) {
+  const selectedFile = safeText(fileName) || FALLBACK_BANLIST_FILE
+  activeBanlistFile = selectedFile
+
+  if (deckBanlist.value !== selectedFile) {
+    deckBanlist.value = selectedFile
+  }
+
+  try {
+    const res = await fetch(`${BANLISTS_BASE_PATH}/${encodeURIComponent(selectedFile)}`, {
+      cache: "no-store"
+    })
+
+    if (!res.ok) throw new Error("Failed to load banlist")
+
+    const text = await res.text()
+    banlistLimitById = parseBanlistConfig(text)
+  } catch {
+    banlistLimitById = new Map()
+  }
+}
+
 function getStorageKey() {
   return currentPlayer ? `${STORAGE_PREFIX}${currentPlayer}` : ""
+}
+
+function getBanlistLimit(cardKey) {
+  const normalized = normalizeCardId(cardKey)
+  if (!normalized) return MAX_COPIES_PER_DECK
+  if (!banlistLimitById.has(normalized)) return MAX_COPIES_PER_DECK
+
+  const limit = Number(banlistLimitById.get(normalized))
+  if (!Number.isFinite(limit)) return MAX_COPIES_PER_DECK
+  return Math.max(0, Math.min(MAX_COPIES_PER_DECK, limit))
+}
+
+function getCopyLimitLabel(cardKey) {
+  const ownedCount = getOwnedCount(cardKey)
+  const banlistLimit = getBanlistLimit(cardKey)
+
+  if (banlistLimit === 0) {
+    return `Forbidden in ${formatBanlistLabel(activeBanlistFile)}`
+  }
+
+  if (banlistLimit < Math.min(MAX_COPIES_PER_DECK, ownedCount)) {
+    return `Limited ${banlistLimit} in ${formatBanlistLabel(activeBanlistFile)}`
+  }
+
+  if (ownedCount < MAX_COPIES_PER_DECK) {
+    return `Owned x${ownedCount}`
+  }
+
+  return `Max ${MAX_COPIES_PER_DECK}`
+}
+
+function getDeckCopyLimit(cardKey) {
+  const ownedCount = getOwnedCount(cardKey)
+  if (ownedCount <= 0) return 0
+  return Math.max(0, Math.min(MAX_COPIES_PER_DECK, ownedCount, getBanlistLimit(cardKey)))
+}
+
+function getGeneralDeckCopyLimit(cardKey) {
+  const ownedCount = getOwnedCount(cardKey)
+  if (ownedCount <= 0) return 0
+  return Math.max(0, Math.min(MAX_COPIES_PER_DECK, ownedCount))
 }
 
 function isLoggedIn() {
@@ -191,6 +361,7 @@ function resetPreview() {
   previewImage.alt = ""
   previewImage.hidden = true
   previewEmpty.hidden = false
+  previewEmpty.textContent = "No card selected yet."
 }
 
 function refreshPreviewPanel() {
@@ -207,7 +378,7 @@ function refreshPreviewPanel() {
 
   const imageUrl = getBinderModalImage(row)
   previewTitle.textContent = safeText(row.name) || "Unknown Card"
-  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getRemainingCount(previewCardKey)} copies left in binder`
+  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(previewCardKey)} • ${getRemainingCount(previewCardKey)} left to add`
 
   if (imageUrl) {
     previewImage.src = imageUrl
@@ -257,12 +428,20 @@ async function logout() {
 }
 
 function renderAuth() {
+  const hasAccess = isLoggedIn() && !!getAllowedPlayers().length
+
   if (isLoggedIn()) {
     if (loginButton) loginButton.style.display = "none"
     if (logoutButton) logoutButton.style.display = "inline-flex"
+    if (exportButton) exportButton.hidden = !hasAccess
+    if (clearDeckButton) clearDeckButton.hidden = !hasAccess
+    if (exportHint) exportHint.hidden = !hasAccess
   } else {
     if (loginButton) loginButton.style.display = "inline-flex"
     if (logoutButton) logoutButton.style.display = "none"
+    if (exportButton) exportButton.hidden = true
+    if (clearDeckButton) clearDeckButton.hidden = true
+    if (exportHint) exportHint.hidden = true
   }
 }
 
@@ -300,8 +479,7 @@ function buildTabs() {
 }
 
 function renderAccessState() {
-  const hasAccess = isLoggedIn() && !!getAllowedPlayers().length
-  if (deckAuthActions) deckAuthActions.hidden = !hasAccess
+  if (deckAuthActions) deckAuthActions.hidden = !isLoggedIn()
 
   if (!isLoggedIn()) {
     accessNotice.hidden = false
@@ -899,7 +1077,7 @@ function getOwnedCount(cardKey) {
 }
 
 function getRemainingCount(cardKey) {
-  return Math.max(getOwnedCount(cardKey) - getUsedCount(cardKey), 0)
+  return Math.max(getDeckCopyLimit(cardKey) - getUsedCount(cardKey), 0)
 }
 
 function getAddBlockedReason(cardKey, requestedTarget = "") {
@@ -914,8 +1092,27 @@ function getAddBlockedReason(cardKey, requestedTarget = "") {
     return "This card cannot go there"
   }
 
-  if (getRemainingCount(cardKey) <= 0) return "No copies left"
   if (deckState[section].length >= DECK_LIMITS[section]) return `${section[0].toUpperCase()}${section.slice(1)} deck is full`
+
+  const ownedCount = getOwnedCount(cardKey)
+  const banlistLimit = getBanlistLimit(cardKey)
+  const totalUsed = getUsedCount(cardKey)
+
+  if (banlistLimit <= 0) {
+    return `${safeText(row.name) || "This card"} is forbidden in ${formatBanlistLabel(activeBanlistFile)}`
+  }
+
+  if (totalUsed >= getDeckCopyLimit(cardKey)) {
+    if (banlistLimit < Math.min(MAX_COPIES_PER_DECK, ownedCount)) {
+      return `Limited to ${banlistLimit} cop${banlistLimit === 1 ? "y" : "ies"} in ${formatBanlistLabel(activeBanlistFile)}`
+    }
+
+    if (ownedCount < MAX_COPIES_PER_DECK) {
+      return "No copies left"
+    }
+
+    return `Max ${MAX_COPIES_PER_DECK} copies per deck`
+  }
 
   return ""
 }
@@ -937,7 +1134,7 @@ function sanitizeDeckState(candidate) {
   }
 
   const remainingByKey = new Map(
-    poolRows.map((row) => [row._deckKey, toNumber(row.quantity) || 0])
+    poolRows.map((row) => [row._deckKey, getGeneralDeckCopyLimit(row._deckKey)])
   )
 
   for (const section of ["main", "extra"]) {
@@ -1050,7 +1247,8 @@ async function loadPlayerContext() {
       artworkPrefs = {}
       artworkPrefsPlayer = currentPlayer
       return {}
-    })
+    }),
+    loadBanlistData(deckBanlist.value || activeBanlistFile).catch(() => new Map())
   ])
 
   if (binderResp.status === 401) {
@@ -1080,7 +1278,7 @@ async function loadPlayerContext() {
     resetPreview()
   }
 
-  setStatus(`Loaded ${getPlayerLabel(currentPlayer)} binder.`)
+  setStatus(`Loaded ${getPlayerLabel(currentPlayer)} binder • ${formatBanlistLabel(activeBanlistFile)}.`)
   renderAll()
 }
 
@@ -1159,7 +1357,7 @@ function renderPool() {
       </div>
       <div class="deckbuilder-card-copy">
         <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-        <div class="deckbuilder-card-subtitle">${remainingCount} left in binder</div>
+        <div class="deckbuilder-card-subtitle">${remainingCount} left to add • ${getCopyLimitLabel(cardKey)}</div>
       </div>
     `
 
@@ -1234,7 +1432,7 @@ function renderSection(section, container, labelElement) {
       </button>
       <div class="deckbuilder-section-copy">
         <div class="deckbuilder-section-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-        <div class="deckbuilder-section-subtitle">Owned x${safeText(row.quantity) || "1"}</div>
+        <div class="deckbuilder-section-subtitle">Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(cardKey)}</div>
       </div>
       <div class="deckbuilder-section-controls">
         <button type="button" class="deckbuilder-control-button" data-action="minus">-</button>
@@ -1260,6 +1458,10 @@ function renderSection(section, container, labelElement) {
   })
 }
 
+function getCardsOverCurrentCopyLimit() {
+  return poolRows.filter((row) => getUsedCount(row._deckKey) > getDeckCopyLimit(row._deckKey))
+}
+
 function renderSummary() {
   const mainTotal = deckState.main.length
   const extraTotal = deckState.extra.length
@@ -1270,12 +1472,17 @@ function renderSummary() {
   if (mainTotal > 60) warnings.push("Main is over 60")
   if (extraTotal > 15) warnings.push("Extra is over 15")
 
+  const overLimitCards = getCardsOverCurrentCopyLimit()
+  if (overLimitCards.length) {
+    warnings.push(`${overLimitCards.length} card${overLimitCards.length === 1 ? " is" : "s are"} over ${formatBanlistLabel(activeBanlistFile)} limits`)
+  }
+
   if (!totalUsed) {
-    exportHint.textContent = "Your draft is empty."
+    exportHint.textContent = `Your draft is empty • ${formatBanlistLabel(activeBanlistFile)}`
   } else if (warnings.length) {
     exportHint.textContent = warnings.join(" | ")
   } else {
-    exportHint.textContent = `Ready to export ${getPlayerLabel(currentPlayer)}.ydk`
+    exportHint.textContent = `Ready to export ${getPlayerLabel(currentPlayer)}.ydk • ${formatBanlistLabel(activeBanlistFile)}`
   }
 }
 
@@ -1365,6 +1572,12 @@ toggleFiltersButton.addEventListener("click", () => {
   setBinderFiltersCollapsed(!binderFiltersCollapsed)
 })
 
+deckBanlist.addEventListener("change", async () => {
+  await loadBanlistData(deckBanlist.value)
+  renderAll()
+  setStatus(`Using ${formatBanlistLabel(activeBanlistFile)} banlist.`)
+})
+
 logoutButton.addEventListener("click", logout)
 
 clearDeckButton.addEventListener("click", () => {
@@ -1390,6 +1603,8 @@ async function init() {
     syncFilterVisibility()
     updateSortDirectionButton()
     setBinderFiltersCollapsed(binderFiltersCollapsed)
+    await loadBanlistManifest()
+    await loadBanlistData(deckBanlist.value || activeBanlistFile)
 
     if (currentPlayer) {
       await loadPlayerContext()
@@ -1397,7 +1612,7 @@ async function init() {
       setStatus("Logged in, but no binder is assigned to this Discord account.")
       renderAll()
     } else {
-      setStatus("Log in with Discord to build a deck from your binder.")
+      setStatus(`Log in with Discord to build a deck from your binder • ${formatBanlistLabel(activeBanlistFile)}.`)
       renderAll()
     }
   } catch (error) {
