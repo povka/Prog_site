@@ -373,7 +373,7 @@ function getCopyLimitLabel(cardKey) {
   }
 
   if (ownedCount >= MAX_COPIES_PER_DECK) {
-    return `Max ${MAX_COPIES_PER_DECK}`
+    return `Max x${MAX_COPIES_PER_DECK}`
   }
 
   return `Owned x${ownedCount}`
@@ -1357,7 +1357,7 @@ function getAddBlockedReason(cardKey, requestedTarget = "") {
       return "No copies left"
     }
 
-    return `Max ${MAX_COPIES_PER_DECK} copies per deck`
+    return `Max x${MAX_COPIES_PER_DECK} copies per deck`
   }
 
   return ""
