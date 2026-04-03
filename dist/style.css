@@ -1071,6 +1071,10 @@ p{color:var(--ink-soft)}
   width:100%;
 }
 
+#binderSort{
+  min-width:180px;
+}
+
 .binder-controls-sort-spacer{
   min-width:0;
 }
@@ -1100,7 +1104,7 @@ p{color:var(--ink-soft)}
 .binder-controls-sort-box{
   width:100%;
   display:grid;
-  grid-template-columns:minmax(0, 1fr) 52px auto;
+  grid-template-columns:minmax(180px, 240px) 52px auto;
   gap:10px;
   align-items:stretch;
   justify-self:stretch;
@@ -2403,28 +2407,32 @@ p{color:var(--ink-soft)}
 }
 
 .deckbuilder-body{
-  display:grid;
-  grid-template-columns:minmax(300px, 360px) minmax(0, 1fr);
-  gap:24px;
-  align-items:start;
+  --deckbuilder-preview-width:360px;
+  display:block;
 }
 
 .deckbuilder-page-shell{
   min-width:0;
+  margin-left:calc(var(--deckbuilder-preview-width) + 42px);
 }
 
 .deckbuilder-preview-rail{
+  position:fixed;
+  top:18px;
+  bottom:18px;
+  left:18px;
+  z-index:30;
+  width:var(--deckbuilder-preview-width);
   min-width:0;
-  padding:18px 0 24px 18px;
+  padding:0;
 }
 
 .deckbuilder-preview-card{
-  position:sticky;
-  top:18px;
   display:flex;
   flex-direction:column;
   gap:18px;
-  min-height:calc(100vh - 36px);
+  height:100%;
+  min-height:0;
   padding:22px;
   border:2px solid var(--line);
   border-radius:24px;
@@ -2434,6 +2442,9 @@ p{color:var(--ink-soft)}
 
 .deckbuilder-preview-card h2{
   margin:0;
+  font-size:clamp(1.35rem, 1.65vw, 1.9rem);
+  line-height:1.08;
+  max-width:100%;
 }
 
 .deckbuilder-preview-subtitle{
@@ -2471,7 +2482,7 @@ p{color:var(--ink-soft)}
 }
 
 .deckbuilder-summary-grid{
-  grid-template-columns:repeat(3, minmax(0, 1fr));
+  grid-template-columns:repeat(2, minmax(0, 1fr));
 }
 
 .deckbuilder-actions-row{
@@ -2551,17 +2562,17 @@ p{color:var(--ink-soft)}
 }
 
 @media (max-width: 1460px){
-  .deckbuilder-body{
-    display:block;
+  .deckbuilder-page-shell{
+    margin-left:0;
   }
 
   .deckbuilder-preview-rail{
+    position:static;
+    width:auto;
     padding:18px 16px 0;
   }
 
   .deckbuilder-preview-card{
-    position:static;
-    min-height:unset;
     max-width:420px;
     margin:0 auto;
   }

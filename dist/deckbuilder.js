@@ -44,7 +44,6 @@ const clearDeckButton = document.getElementById("clearDeckButton")
 const exportHint = document.getElementById("exportHint")
 const mainCount = document.getElementById("mainCount")
 const extraCount = document.getElementById("extraCount")
-const totalUsedCount = document.getElementById("totalUsedCount")
 const mainSectionLabel = document.getElementById("mainSectionLabel")
 const extraSectionLabel = document.getElementById("extraSectionLabel")
 const mainList = document.getElementById("mainList")
@@ -1271,7 +1270,6 @@ function renderSummary() {
 
   mainCount.textContent = String(mainTotal)
   extraCount.textContent = String(extraTotal)
-  totalUsedCount.textContent = String(totalUsed)
 
   const warnings = []
   if (mainTotal < 40) warnings.push("Main is under 40")
