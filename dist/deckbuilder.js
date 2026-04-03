@@ -355,20 +355,21 @@ function getBanlistLimit(cardKey) {
 function getCopyLimitLabel(cardKey) {
   const ownedCount = getOwnedCount(cardKey)
   const banlistLimit = getBanlistLimit(cardKey)
+  const banlistName = formatBanlistLabel(activeBanlistFile)
 
   if (banlistLimit === 0) {
-    return `Forbidden in ${formatBanlistLabel(activeBanlistFile)}`
+    return `Forbidden in ${banlistName}`
   }
 
-  if (banlistLimit < Math.min(MAX_COPIES_PER_DECK, ownedCount)) {
-    return `Limited ${banlistLimit} in ${formatBanlistLabel(activeBanlistFile)}`
+  if (banlistLimit === 1 || banlistLimit === 2) {
+    return `Limited ${banlistLimit} in ${banlistName}`
   }
 
-  if (ownedCount < MAX_COPIES_PER_DECK) {
-    return `Owned x${ownedCount}`
+  if (ownedCount >= MAX_COPIES_PER_DECK) {
+    return `Max ${MAX_COPIES_PER_DECK}`
   }
 
-  return `Max ${MAX_COPIES_PER_DECK}`
+  return `Owned x${ownedCount}`
 }
 
 function rebuildDeckUsageIndex() {
@@ -643,7 +644,7 @@ function refreshPreviewPanel() {
 
   const imageUrl = row._previewImageLarge || getBinderModalImage(row)
   previewTitle.textContent = safeText(row.name) || "Unknown Card"
-  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(previewCardKey)}`
+  previewSubtitle.textContent = getCopyLimitLabel(previewCardKey)
   if (imageUrl) {
     previewImage.src = imageUrl
     previewImage.alt = safeText(row.name) || "Card image"
@@ -1650,7 +1651,6 @@ function buildPoolCard(row) {
     </div>
     <div class="deckbuilder-card-copy">
       <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-      <div class="deckbuilder-card-subtitle">${getCopyLimitLabel(cardKey)}</div> 
     </div>
   `
 
@@ -1778,7 +1778,7 @@ function renderSection(section, container, labelElement) {
       </button>
       <div class="deckbuilder-section-copy">
         <div class="deckbuilder-section-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-        <div class="deckbuilder-section-subtitle">Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(cardKey)}</div>
+        <div class="deckbuilder-section-subtitle">${getCopyLimitLabel(cardKey)}</div>
       </div>
       <div class="deckbuilder-section-controls">
         <button type="button" class="deckbuilder-control-button" data-action="minus">-</button>
