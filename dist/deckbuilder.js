@@ -1877,7 +1877,7 @@ function renderSummary() {
     const secondaryWarnings = warnings.filter((warning) => warning !== "Main is under 40")
 
     exportHint.innerHTML = `
-      <span style="display:block; color:#ff2b2b; font-size:2rem; font-weight:900; line-height:1.05; letter-spacing:0.04em; text-transform:uppercase;">
+      <span style="display:block; color:#ff2b2b; font-size:1.4rem; font-weight:900; line-height:1.05; letter-spacing:0.04em; text-transform:uppercase;">
         Main is under 40
       </span>
       ${secondaryWarnings.length
