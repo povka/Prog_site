@@ -1861,9 +1861,33 @@ function renderSummary() {
     warnings.push(`${overLimitCards.length} card${overLimitCards.length === 1 ? " is" : "s are"} over ${formatBanlistLabel(activeBanlistFile)} limits`)
   }
 
+  exportHint.style.color = ""
+  exportHint.style.fontSize = ""
+  exportHint.style.fontWeight = ""
+  exportHint.style.lineHeight = ""
+  exportHint.style.letterSpacing = ""
+  exportHint.style.textTransform = ""
+
   if (!totalUsed) {
     exportHint.textContent = `Your draft is empty • ${formatBanlistLabel(activeBanlistFile)}`
-  } else if (warnings.length) {
+    return
+  }
+
+  if (mainTotal < 40) {
+    const secondaryWarnings = warnings.filter((warning) => warning !== "Main is under 40")
+
+    exportHint.innerHTML = `
+      <span style="display:block; color:#ff2b2b; font-size:2rem; font-weight:900; line-height:1.05; letter-spacing:0.04em; text-transform:uppercase;">
+        Main is under 40
+      </span>
+      ${secondaryWarnings.length
+        ? `<span style="display:block; margin-top:8px;">${secondaryWarnings.join(" | ")}</span>`
+        : ""}
+    `
+    return
+  }
+
+  if (warnings.length) {
     exportHint.textContent = warnings.join(" | ")
   } else {
     exportHint.textContent = `Ready to export ${getPlayerLabel(currentPlayer)}.ydk • ${formatBanlistLabel(activeBanlistFile)}`
