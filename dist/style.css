@@ -2999,3 +2999,75 @@ p{color:var(--ink-soft)}
     width:100%;
   }
 }
+
+@media (min-width: 1181px){
+  :root{
+    --deckbuilder-stick-top: 28px;
+    --deckbuilder-bottom-gap: 20px;
+  }
+
+  body.deckbuilder-body,
+  .deckbuilder-page-shell,
+  .deckbuilder-page-shell > main.section,
+  .deckbuilder-page-shell > main.section > .container,
+  .deckbuilder-page-card,
+  .settings-shell,
+  .deckbuilder-shell{
+    height:auto !important;
+    min-height:0 !important;
+    overflow:visible !important;
+  }
+
+  .deckbuilder-layout{
+    align-items:start;
+  }
+
+  .deckbuilder-pool-card-shell,
+  .deckbuilder-sidebar{
+    position:sticky;
+    top:var(--deckbuilder-stick-top);
+    height:calc(100vh - var(--deckbuilder-stick-top) - var(--deckbuilder-bottom-gap));
+    min-height:0;
+  }
+
+  .deckbuilder-pool-card-shell,
+  .deckbuilder-section-card{
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  .deckbuilder-pool-grid{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding-right:4px;
+  }
+
+  .deckbuilder-sidebar{
+    display:grid;
+    grid-template-rows:minmax(0, 1fr) minmax(0, 1fr);
+    gap:14px;
+    min-height:0;
+  }
+
+  .deckbuilder-section-list,
+  .deckbuilder-preview-scroll{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding-right:4px;
+  }
+
+  .deckbuilder-preview-rail{
+    top:var(--deckbuilder-stick-top);
+    bottom:var(--deckbuilder-bottom-gap);
+    height:auto;
+  }
+
+  .deckbuilder-preview-card{
+    height:100%;
+  }
+}
