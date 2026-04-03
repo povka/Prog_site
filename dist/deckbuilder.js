@@ -619,8 +619,7 @@ function renderPreviewInfo(row) {
 function resetPreview() {
   previewCardKey = ""
   previewTitle.textContent = "Select a card"
-  previewSubtitle.textContent = "Left click a card to preview it here. Right click a card to add it to your deck."
-  previewImage.src = ""
+  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getCopyLimitLabel(previewCardKey)}`  previewImage.src = ""
   previewImage.alt = ""
   previewImage.hidden = true
   previewEmpty.hidden = false
@@ -1629,7 +1628,6 @@ function buildPoolCard(row) {
   const cardKey = row._deckKey
   const previewImageUrl = row._previewImageSmall || getBinderPreviewImage(row)
   const usedCount = getUsedCount(cardKey)
-  const remainingCount = getRemainingCount(cardKey)
   const banlistIcon = row._banlistIcon || getBanlistIconForRow(row)
   const banlistLabel = row._banlistLabel || getBanlistLabelForRow(row)
   const atLimit = !!getAddBlockedReason(cardKey)
@@ -1652,7 +1650,7 @@ function buildPoolCard(row) {
     </div>
     <div class="deckbuilder-card-copy">
       <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-      <div class="deckbuilder-card-subtitle">${remainingCount} left to add • ${getCopyLimitLabel(cardKey)}</div>
+      <div class="deckbuilder-card-subtitle">${getCopyLimitLabel(cardKey)}</div> 
     </div>
   `
 
