@@ -360,6 +360,7 @@ const DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token";
 const DISCORD_ME_URL = "https://discord.com/api/v10/users/@me";
 
 const OAUTH_STATE_COOKIE = "prog_discord_oauth_state";
+const OAUTH_RETURN_COOKIE = "prog_discord_oauth_return";
 const SESSION_COOKIE = "prog_discord_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
@@ -409,6 +410,29 @@ function clearCookie(name) {
     secure: true,
     sameSite: "Lax"
   });
+}
+
+function getSafeReturnPath(value, fallback = "/settings.html") {
+  const raw = safeText(value);
+
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(raw, "https://example.com");
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function getAllowedPlayersFromSession(session) {
+  const values = Array.isArray(session?.allowedPlayers)
+    ? session.allowedPlayers
+    : [];
+
+  return values.filter((player) => PLAYER_KEYS.has(player));
 }
 
 function randomString(byteLength = 24) {
@@ -585,6 +609,10 @@ export default {
 
         if (url.pathname === "/auth/discord/login" && request.method === "GET") {
       const state = randomString(24);
+      const returnTo = getSafeReturnPath(
+        url.searchParams.get("returnTo"),
+        "/settings.html"
+      );
       const redirectUri = new URL("/auth/discord/callback", url.origin).toString();
 
       const authUrl = new URL(DISCORD_AUTH_URL);
@@ -595,18 +623,32 @@ export default {
       authUrl.searchParams.set("state", state);
       authUrl.searchParams.set("prompt", "consent");
 
+      const headers = new Headers();
+      headers.set("location", authUrl.toString());
+      headers.append(
+        "set-cookie",
+        serializeCookie(OAUTH_STATE_COOKIE, state, {
+          path: "/",
+          maxAge: 600,
+          httpOnly: true,
+          secure: true,
+          sameSite: "Lax"
+        })
+      );
+      headers.append(
+        "set-cookie",
+        serializeCookie(OAUTH_RETURN_COOKIE, encodeURIComponent(returnTo), {
+          path: "/",
+          maxAge: 600,
+          httpOnly: true,
+          secure: true,
+          sameSite: "Lax"
+        })
+      );
+
       return new Response(null, {
         status: 302,
-        headers: {
-          "location": authUrl.toString(),
-          "set-cookie": serializeCookie(OAUTH_STATE_COOKIE, state, {
-            path: "/",
-            maxAge: 600,
-            httpOnly: true,
-            secure: true,
-            sameSite: "Lax"
-          })
-        }
+        headers
       });
     }
 
@@ -615,6 +657,17 @@ export default {
   const returnedState = safeText(url.searchParams.get("state"));
   const cookies = parseCookies(request);
   const storedState = safeText(cookies[OAUTH_STATE_COOKIE]);
+
+  let decodedReturnTo = "/settings.html";
+  try {
+    decodedReturnTo = safeText(cookies[OAUTH_RETURN_COOKIE])
+      ? decodeURIComponent(safeText(cookies[OAUTH_RETURN_COOKIE]))
+      : "/settings.html";
+  } catch {
+    decodedReturnTo = "/settings.html";
+  }
+
+  const returnTo = getSafeReturnPath(decodedReturnTo, "/settings.html");
 
   if (!code || !returnedState || !storedState || returnedState !== storedState) {
     return new Response("Invalid OAuth state.", { status: 400 });
@@ -678,8 +731,9 @@ export default {
   const sessionValue = await createSessionValue(session, env.SESSION_SECRET);
 
   const headers = new Headers();
-  headers.set("Location", "/settings.html");
+  headers.set("Location", returnTo);
   headers.append("Set-Cookie", clearCookie(OAUTH_STATE_COOKIE));
+  headers.append("Set-Cookie", clearCookie(OAUTH_RETURN_COOKIE));
   headers.append(
     "Set-Cookie",
     serializeCookie(SESSION_COOKIE, sessionValue, {
@@ -726,9 +780,7 @@ export default {
                 avatar: session.avatar
               })
             : "",
-          allowedPlayers: Array.isArray(session.allowedPlayers)
-            ? session.allowedPlayers
-            : []
+          allowedPlayers: getAllowedPlayersFromSession(session)
         }
       });
     }
@@ -747,6 +799,52 @@ export default {
       prefs
     });
   }
+
+
+    if (url.pathname === "/api/deckbuilder/binder" && request.method === "GET") {
+      const session = await readSession(request, env);
+
+      if (!session) {
+        return jsonResponse({ error: "Unauthorized." }, { status: 401 });
+      }
+
+      const allowedPlayers = getAllowedPlayersFromSession(session);
+
+      if (!allowedPlayers.length) {
+        return jsonResponse({ error: "No player binders are assigned to this Discord account." }, { status: 403 });
+      }
+
+      const requestedPlayer = safeText(url.searchParams.get("player")).toLowerCase();
+      const player = allowedPlayers.includes(requestedPlayer)
+        ? requestedPlayer
+        : allowedPlayers[0];
+
+      const assetUrl = new URL(`/data/generated/${player}.json`, url.origin);
+      const binderResponse = await env.ASSETS.fetch(new Request(assetUrl.toString(), {
+        method: "GET",
+        headers: {
+          "cache-control": "no-store"
+        }
+      }));
+
+      if (!binderResponse.ok) {
+        return jsonResponse({ error: `Could not load binder for ${player}.` }, { status: 500 });
+      }
+
+      let binder = [];
+      try {
+        binder = await binderResponse.json();
+      } catch {
+        binder = [];
+      }
+
+      return jsonResponse({
+        ok: true,
+        player,
+        players: allowedPlayers,
+        binder: Array.isArray(binder) ? binder : []
+      });
+    }
 
     if (url.pathname !== "/discord/interactions") {
       return env.ASSETS.fetch(request);

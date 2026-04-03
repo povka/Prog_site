@@ -1,0 +1,1435 @@
+const PLAYERS = [
+  { key: "asapaska", label: "asapaska" },
+  { key: "retroid99", label: "Retroid99" },
+  { key: "mhkaixer", label: "MHKaixer" },
+  { key: "shiruba", label: "ShirubaMaebure" }
+]
+
+const IMAGE_VERSION = "2"
+const STORAGE_PREFIX = "prog_deckbuilder_"
+const DECK_LIMITS = {
+  main: 60,
+  extra: 15,
+  side: 15
+}
+
+let currentUser = null
+let currentPlayer = ""
+let binderRows = []
+let currentBinderRows = []
+let poolRows = []
+let poolByKey = new Map()
+let artworkManifest = {}
+let artworkPrefs = {}
+let artworkPrefsPlayer = ""
+let artworkManifestByImageId = {}
+let binderSortDirection = "asc"
+let binderFiltersCollapsed = true
+let activeDestination = "auto"
+let deckState = {
+  main: [],
+  extra: [],
+  side: []
+}
+
+const playerTabs = document.getElementById("playerTabs")
+const binderSearch = document.getElementById("binderSearch")
+const binderGrid = document.getElementById("binderGrid")
+const binderStatus = document.getElementById("binderStatus")
+const statusText = document.getElementById("statusText")
+const accessNotice = document.getElementById("accessNotice")
+const builderShell = document.getElementById("builderShell")
+const loginButton = document.getElementById("loginButton")
+const logoutButton = document.getElementById("logoutButton")
+const exportButton = document.getElementById("exportButton")
+const clearDeckButton = document.getElementById("clearDeckButton")
+const exportHint = document.getElementById("exportHint")
+const targetHint = document.getElementById("targetHint")
+const targetButtons = Array.from(document.querySelectorAll("[data-deck-target]"))
+const mainCount = document.getElementById("mainCount")
+const extraCount = document.getElementById("extraCount")
+const sideCount = document.getElementById("sideCount")
+const totalUsedCount = document.getElementById("totalUsedCount")
+const mainSectionLabel = document.getElementById("mainSectionLabel")
+const extraSectionLabel = document.getElementById("extraSectionLabel")
+const sideSectionLabel = document.getElementById("sideSectionLabel")
+const mainList = document.getElementById("mainList")
+const extraList = document.getElementById("extraList")
+const sideList = document.getElementById("sideList")
+
+const filterType = document.getElementById("filterType")
+const filterAttribute = document.getElementById("filterAttribute")
+const filterRace = document.getElementById("filterRace")
+const filterSubtypes = document.getElementById("filterSubtypes")
+const filterAtkExact = document.getElementById("filterAtkExact")
+const filterAtkMin = document.getElementById("filterAtkMin")
+const filterAtkMax = document.getElementById("filterAtkMax")
+const filterDefExact = document.getElementById("filterDefExact")
+const filterDefMin = document.getElementById("filterDefMin")
+const filterDefMax = document.getElementById("filterDefMax")
+const filterLevelExact = document.getElementById("filterLevelExact")
+const filterLevelMin = document.getElementById("filterLevelMin")
+const filterLevelMax = document.getElementById("filterLevelMax")
+const filterRankExact = document.getElementById("filterRankExact")
+const filterRankMin = document.getElementById("filterRankMin")
+const filterRankMax = document.getElementById("filterRankMax")
+const filterLinkExact = document.getElementById("filterLinkExact")
+const filterLinkMin = document.getElementById("filterLinkMin")
+const filterLinkMax = document.getElementById("filterLinkMax")
+const filterScaleExact = document.getElementById("filterScaleExact")
+const filterScaleMin = document.getElementById("filterScaleMin")
+const filterScaleMax = document.getElementById("filterScaleMax")
+const filterLinkArrows = document.getElementById("filterLinkArrows")
+const filterSpellType = document.getElementById("filterSpellType")
+const filterTrapType = document.getElementById("filterTrapType")
+const binderFiltersPanel = document.getElementById("binderFiltersPanel")
+const toggleFiltersButton = document.getElementById("toggleFiltersButton")
+const binderSort = document.getElementById("binderSort")
+const binderSortDirectionButton = document.getElementById("binderSortDirection")
+
+const modal = document.getElementById("imageModal")
+const modalImage = document.getElementById("modalImage")
+const modalBanlistBadge = document.getElementById("modalBanlistBadge")
+const modalBanlistIcon = document.getElementById("modalBanlistIcon")
+const modalTitle = document.getElementById("modalTitle")
+const closeModalButton = document.getElementById("closeModal")
+
+function safeText(value) {
+  return value ? String(value).trim() : ""
+}
+
+function setStatus(text) {
+  statusText.textContent = text
+}
+
+function withImageVersion(url) {
+  const text = safeText(url)
+  if (!text) return ""
+
+  const separator = text.includes("?") ? "&" : "?"
+  return `${text}${separator}v=${encodeURIComponent(IMAGE_VERSION)}`
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined) return null
+  const trimmed = String(value).trim()
+  if (trimmed === "") return null
+  const n = Number(trimmed)
+  return Number.isFinite(n) ? n : null
+}
+
+function normalizeCardId(value) {
+  const raw = safeText(value)
+  if (!raw) return ""
+
+  const digitsOnly = raw.replace(/\D+/g, "")
+  if (!digitsOnly) return ""
+
+  return String(Number(digitsOnly))
+}
+
+function formatYdkCardId(value) {
+  const normalized = normalizeCardId(value)
+  if (!normalized) return ""
+  return normalized.length < 8 ? normalized.padStart(8, "0") : normalized
+}
+
+function getStorageKey() {
+  return currentPlayer ? `${STORAGE_PREFIX}${currentPlayer}` : ""
+}
+
+function isLoggedIn() {
+  return !!currentUser
+}
+
+function getAllowedPlayers() {
+  return Array.isArray(currentUser?.allowedPlayers) ? currentUser.allowedPlayers : []
+}
+
+function getPlayerLabel(playerKey) {
+  return PLAYERS.find((player) => player.key === playerKey)?.label || playerKey
+}
+
+function parseMultiSearchTerms(value) {
+  return safeText(value)
+    .toLowerCase()
+    .split("|")
+    .map((term) => term.trim())
+    .filter(Boolean)
+}
+
+function swapCardImageFolder(path, folderName) {
+  const text = safeText(path)
+  if (!text) return ""
+
+  if (text.includes("/images/cards_small/")) {
+    return text.replace("/images/cards_small/", `/images/${folderName}/`)
+  }
+
+  if (text.includes("/images/cards/")) {
+    return text.replace("/images/cards/", `/images/${folderName}/`)
+  }
+
+  if (text.includes("images/cards_small/")) {
+    return text.replace("images/cards_small/", `images/${folderName}/`)
+  }
+
+  if (text.includes("images/cards/")) {
+    return text.replace("images/cards/", `images/${folderName}/`)
+  }
+
+  return text
+}
+
+async function loadMe() {
+  const resp = await fetch("/api/me", {
+    cache: "no-store",
+    credentials: "same-origin"
+  })
+
+  if (!resp.ok) {
+    throw new Error("Failed to load session.")
+  }
+
+  const data = await resp.json()
+  currentUser = data?.loggedIn && data?.user ? data.user : null
+}
+
+async function logout() {
+  await fetch("/auth/logout", {
+    method: "POST",
+    credentials: "same-origin"
+  })
+
+  currentUser = null
+  currentPlayer = ""
+  binderRows = []
+  currentBinderRows = []
+  poolRows = []
+  poolByKey = new Map()
+  deckState = { main: [], extra: [], side: [] }
+  artworkPrefs = {}
+  artworkPrefsPlayer = ""
+  renderAuth()
+  buildTabs()
+  renderAccessState()
+  renderAll()
+  setStatus("Logged out.")
+}
+
+function renderAuth() {
+  if (isLoggedIn()) {
+    if (loginButton) loginButton.style.display = "none"
+    if (logoutButton) logoutButton.style.display = "inline-flex"
+  } else {
+    if (loginButton) loginButton.style.display = "inline-flex"
+    if (logoutButton) logoutButton.style.display = "none"
+  }
+}
+
+function buildTabs() {
+  playerTabs.innerHTML = ""
+
+  const allowedPlayers = getAllowedPlayers()
+  const visiblePlayers = PLAYERS.filter((player) => allowedPlayers.includes(player.key))
+
+  if (!visiblePlayers.length) {
+    currentPlayer = ""
+    return
+  }
+
+  if (!visiblePlayers.some((player) => player.key === currentPlayer)) {
+    currentPlayer = visiblePlayers[0].key
+  }
+
+  for (const player of visiblePlayers) {
+    const btn = document.createElement("button")
+    btn.className = `settings-player-tab${player.key === currentPlayer ? " is-active" : ""}`
+    btn.type = "button"
+    btn.textContent = player.label
+
+    btn.addEventListener("click", async () => {
+      if (player.key === currentPlayer) return
+      currentPlayer = player.key
+      buildTabs()
+      await loadPlayerContext()
+    })
+
+    playerTabs.appendChild(btn)
+  }
+}
+
+function renderAccessState() {
+  if (!isLoggedIn()) {
+    accessNotice.hidden = false
+    accessNotice.textContent = "Log in with Discord to load your private binder and build a deck."
+    builderShell.hidden = true
+    return
+  }
+
+  if (!getAllowedPlayers().length) {
+    accessNotice.hidden = false
+    accessNotice.textContent = "Your Discord account is logged in, but it is not mapped to any player binder yet."
+    builderShell.hidden = true
+    return
+  }
+
+  accessNotice.hidden = true
+  builderShell.hidden = false
+}
+
+async function loadArtworkManifest() {
+  if (Object.keys(artworkManifest).length) {
+    return artworkManifest
+  }
+
+  const resp = await fetch("/data/generated/alt-artworks.json", {
+    cache: "no-store"
+  })
+
+  if (!resp.ok) {
+    throw new Error("Failed to load alt-artworks.json")
+  }
+
+  artworkManifest = await resp.json()
+  artworkManifestByImageId = {}
+
+  for (const [baseCardId, entry] of Object.entries(artworkManifest || {})) {
+    const normalizedBaseId = normalizeCardId(baseCardId)
+
+    if (normalizedBaseId) {
+      artworkManifestByImageId[normalizedBaseId] = {
+        baseCardId: normalizedBaseId,
+        entry
+      }
+    }
+
+    for (const option of entry?.options || []) {
+      const normalizedImageId = normalizeCardId(option?.imageId)
+      if (!normalizedImageId) continue
+
+      artworkManifestByImageId[normalizedImageId] = {
+        baseCardId: normalizedBaseId || normalizeCardId(baseCardId),
+        entry
+      }
+    }
+  }
+
+  return artworkManifest
+}
+
+async function loadArtworkPrefsForPlayer(player) {
+  const playerKey = String(player || "").trim().toLowerCase()
+
+  if (!playerKey) {
+    artworkPrefs = {}
+    artworkPrefsPlayer = ""
+    return artworkPrefs
+  }
+
+  if (artworkPrefsPlayer === playerKey) {
+    return artworkPrefs
+  }
+
+  const resp = await fetch(`/api/artwork-prefs?player=${encodeURIComponent(playerKey)}`, {
+    cache: "no-store",
+    credentials: "same-origin"
+  })
+
+  if (!resp.ok) {
+    throw new Error(`Failed to load artwork prefs for ${playerKey}`)
+  }
+
+  const data = await resp.json()
+  artworkPrefs = data?.prefs || {}
+  artworkPrefsPlayer = playerKey
+  return artworkPrefs
+}
+
+function getArtworkLookupIds(row) {
+  return [
+    normalizeCardId(row?.cardid),
+    normalizeCardId(row?.cardId),
+    normalizeCardId(row?.image_id),
+    normalizeCardId(row?.imageId),
+    normalizeCardId(row?.id),
+    normalizeCardId(row?.passcode)
+  ].filter(Boolean)
+}
+
+function getPreferredArtworkUrl(row, folderName = "cards") {
+  const lookupIds = getArtworkLookupIds(row)
+
+  if (!lookupIds.length) {
+    return ""
+  }
+
+  let baseCardId = ""
+  let manifestEntry = null
+
+  for (const lookupId of lookupIds) {
+    const found = artworkManifestByImageId[lookupId]
+    if (found?.entry) {
+      baseCardId = normalizeCardId(found.baseCardId)
+      manifestEntry = found.entry
+      break
+    }
+  }
+
+  if (!manifestEntry) {
+    return ""
+  }
+
+  const prefLookupOrder = [baseCardId, ...lookupIds]
+  let preferredImageId = ""
+
+  for (const key of prefLookupOrder) {
+    const saved = normalizeCardId(artworkPrefs?.[key])
+    if (saved) {
+      preferredImageId = saved
+      break
+    }
+  }
+
+  if (!preferredImageId) {
+    return ""
+  }
+
+  const match = (manifestEntry.options || []).find(
+    (option) => normalizeCardId(option?.imageId) === preferredImageId
+  )
+
+  const imagePath = safeText(match?.image)
+  if (!imagePath) {
+    return ""
+  }
+
+  return swapCardImageFolder(imagePath, folderName) || imagePath
+}
+
+function getCardImageId(row) {
+  return safeText(row.cardid || row.cardId || row.id || row.passcode)
+}
+
+function getDefaultBinderPreviewImage(row) {
+  const directImage = safeText(row.image)
+  if (directImage) {
+    return withImageVersion(
+      swapCardImageFolder(directImage, "cards_small") || directImage
+    )
+  }
+
+  const cardId = getCardImageId(row)
+  return cardId ? withImageVersion(`/images/cards_small/${cardId}.jpg`) : ""
+}
+
+function getDefaultBinderModalImage(row) {
+  const directImage = safeText(row.image)
+  if (directImage) {
+    return withImageVersion(
+      swapCardImageFolder(directImage, "cards") || directImage
+    )
+  }
+
+  const cardId = getCardImageId(row)
+  return cardId ? withImageVersion(`/images/cards/${cardId}.jpg`) : ""
+}
+
+function getBinderPreviewImage(row) {
+  const preferredImage = getPreferredArtworkUrl(row)
+  if (preferredImage) {
+    return withImageVersion(
+      swapCardImageFolder(preferredImage, "cards_small") || preferredImage
+    )
+  }
+
+  return getDefaultBinderPreviewImage(row)
+}
+
+function getBinderModalImage(row) {
+  const preferredImage = getPreferredArtworkUrl(row)
+  if (preferredImage) {
+    return withImageVersion(
+      swapCardImageFolder(preferredImage, "cards") || preferredImage
+    )
+  }
+
+  return getDefaultBinderModalImage(row)
+}
+
+function openModal(src, title) {
+  modalImage.src = src
+  modalImage.alt = title
+  modalTitle.textContent = title
+  modalBanlistIcon.src = ""
+  modalBanlistIcon.alt = ""
+  modalBanlistBadge.hidden = true
+  modal.classList.add("is-open")
+  modal.setAttribute("aria-hidden", "false")
+  document.body.classList.add("modal-open")
+}
+
+function closeModal() {
+  modal.classList.remove("is-open")
+  modal.setAttribute("aria-hidden", "true")
+  modalImage.src = ""
+  modalImage.alt = ""
+  modalBanlistIcon.src = ""
+  modalBanlistIcon.alt = ""
+  modalBanlistBadge.hidden = true
+  document.body.classList.remove("modal-open")
+}
+
+function getHighLevelType(row) {
+  const type = safeText(row.type).toLowerCase()
+  if (type.includes("monster")) return "Monster"
+  if (type.includes("spell")) return "Spell"
+  if (type.includes("trap")) return "Trap"
+  return ""
+}
+
+function normalizeLinkArrow(value) {
+  const normalized = safeText(value)
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+
+  switch (normalized) {
+    case "top-left":
+    case "up-left":
+    case "upleft":
+      return "Top-Left"
+
+    case "top":
+    case "up":
+      return "Top"
+
+    case "top-right":
+    case "up-right":
+    case "upright":
+      return "Top-Right"
+
+    case "left":
+      return "Left"
+
+    case "right":
+      return "Right"
+
+    case "bottom-left":
+    case "down-left":
+    case "downleft":
+      return "Bottom-Left"
+
+    case "bottom":
+    case "down":
+      return "Bottom"
+
+    case "bottom-right":
+    case "down-right":
+    case "downright":
+      return "Bottom-Right"
+
+    default:
+      return ""
+  }
+}
+
+function getRowLinkArrows(row) {
+  const raw =
+    row.linkmarkers ??
+    row.linkMarkers ??
+    row.link_arrows ??
+    row.linkArrows ??
+    []
+
+  if (Array.isArray(raw)) {
+    return raw.map(normalizeLinkArrow).filter(Boolean)
+  }
+
+  if (typeof raw === "string") {
+    return raw
+      .split(/[,|/]+/)
+      .map((part) => normalizeLinkArrow(part))
+      .filter(Boolean)
+  }
+
+  return []
+}
+
+function getSelectedSubtypeValues() {
+  return Array.from(
+    document.querySelectorAll('#filterSubtypes input[type="checkbox"]:checked')
+  ).map((input) => input.value)
+}
+
+function getSelectedLinkArrowValues() {
+  return Array.from(
+    document.querySelectorAll('#filterLinkArrows input[type="checkbox"]:checked')
+  ).map((input) => input.value)
+}
+
+function isMonsterFilterMode() {
+  const selectedType = safeText(filterType.value)
+  return selectedType === "" || selectedType === "Monster"
+}
+
+function isSpellFilterMode() {
+  const selectedType = safeText(filterType.value)
+  return selectedType === "" || selectedType === "Spell"
+}
+
+function isTrapFilterMode() {
+  const selectedType = safeText(filterType.value)
+  return selectedType === "" || selectedType === "Trap"
+}
+
+function isXyzMonster(row) {
+  return safeText(row.type).toLowerCase().includes("xyz")
+}
+
+function isLinkMonster(row) {
+  return safeText(row.type).toLowerCase().includes("link")
+}
+
+function syncFilterVisibility() {
+  const showMonsterRows = isMonsterFilterMode()
+  const showSpellRow = isSpellFilterMode()
+  const showTrapRow = isTrapFilterMode()
+
+  document.querySelectorAll(".monster-filter-row").forEach((row) => {
+    row.classList.toggle("is-hidden", !showMonsterRows)
+  })
+
+  document.querySelectorAll(".spell-filter-row").forEach((row) => {
+    row.classList.toggle("is-hidden", !showSpellRow)
+  })
+
+  document.querySelectorAll(".trap-filter-row").forEach((row) => {
+    row.classList.toggle("is-hidden", !showTrapRow)
+  })
+
+  if (!showMonsterRows) {
+    filterAttribute.value = ""
+    filterRace.value = ""
+
+    document.querySelectorAll('#filterSubtypes input[type="checkbox"]').forEach((input) => {
+      input.checked = false
+    })
+    filterSubtypes.classList.add("is-disabled")
+
+    filterAtkExact.value = ""
+    filterAtkMin.value = ""
+    filterAtkMax.value = ""
+    filterDefExact.value = ""
+    filterDefMin.value = ""
+    filterDefMax.value = ""
+    filterLevelExact.value = ""
+    filterLevelMin.value = ""
+    filterLevelMax.value = ""
+    filterRankExact.value = ""
+    filterRankMin.value = ""
+    filterRankMax.value = ""
+    filterLinkExact.value = ""
+    filterLinkMin.value = ""
+    filterLinkMax.value = ""
+    filterScaleExact.value = ""
+    filterScaleMin.value = ""
+    filterScaleMax.value = ""
+
+    document.querySelectorAll('#filterLinkArrows input[type="checkbox"]').forEach((input) => {
+      input.checked = false
+    })
+    filterLinkArrows.classList.add("is-disabled")
+  } else {
+    filterSubtypes.classList.remove("is-disabled")
+    filterLinkArrows.classList.remove("is-disabled")
+  }
+
+  if (!showSpellRow) {
+    filterSpellType.value = ""
+  }
+
+  if (!showTrapRow) {
+    filterTrapType.value = ""
+  }
+}
+
+function getSortValue(row, sortKey) {
+  switch (sortKey) {
+    case "name":
+      return safeText(row.name).toLowerCase()
+    case "level":
+      return isXyzMonster(row) ? null : toNumber(row.level)
+    case "rank":
+      return isXyzMonster(row) ? toNumber(row.level) : null
+    case "link":
+      return toNumber(row.linkval ?? row.linkVal)
+    case "scale":
+      return toNumber(row.scale)
+    case "atk":
+      return toNumber(row.atk)
+    case "def":
+      return toNumber(row.def)
+    default:
+      return safeText(row.name).toLowerCase()
+  }
+}
+
+function compareSortValues(aValue, bValue, direction) {
+  const aMissing = aValue === null || aValue === undefined || aValue === ""
+  const bMissing = bValue === null || bValue === undefined || bValue === ""
+
+  if (aMissing && bMissing) return 0
+  if (aMissing) return 1
+  if (bMissing) return -1
+
+  if (typeof aValue === "string" || typeof bValue === "string") {
+    const result = String(aValue).localeCompare(String(bValue), undefined, { sensitivity: "base" })
+    return direction === "asc" ? result : -result
+  }
+
+  const result = aValue - bValue
+  return direction === "asc" ? result : -result
+}
+
+function updateFiltersToggleButton() {
+  const expanded = !binderFiltersCollapsed
+  toggleFiltersButton.textContent = expanded ? "Hide filters" : "Show filters"
+  toggleFiltersButton.title = expanded ? "Hide filters" : "Show filters"
+  toggleFiltersButton.setAttribute("aria-expanded", String(expanded))
+}
+
+function setBinderFiltersCollapsed(collapsed) {
+  binderFiltersCollapsed = collapsed
+  binderFiltersPanel.classList.toggle("is-collapsed", collapsed)
+  updateFiltersToggleButton()
+}
+
+function updateSortDirectionButton() {
+  const ascending = binderSortDirection === "asc"
+  binderSortDirectionButton.innerHTML = ascending ? "&uarr;" : "&darr;"
+  binderSortDirectionButton.title = ascending ? "Ascending" : "Descending"
+  binderSortDirectionButton.setAttribute("aria-label", ascending ? "Sorting ascending" : "Sorting descending")
+}
+
+function applyBinderFilters(rows) {
+  const searchTerms = parseMultiSearchTerms(binderSearch.value)
+  const selectedType = safeText(filterType.value)
+  const selectedAttribute = safeText(filterAttribute.value).toUpperCase()
+  const selectedRace = safeText(filterRace.value)
+  const selectedSpellType = safeText(filterSpellType.value)
+  const selectedTrapType = safeText(filterTrapType.value)
+  const selectedSubtypes = getSelectedSubtypeValues()
+
+  const atkExact = toNumber(filterAtkExact.value)
+  const minAtk = toNumber(filterAtkMin.value)
+  const maxAtk = toNumber(filterAtkMax.value)
+  const defExact = toNumber(filterDefExact.value)
+  const minDef = toNumber(filterDefMin.value)
+  const maxDef = toNumber(filterDefMax.value)
+  const levelExact = toNumber(filterLevelExact.value)
+  const minLevel = toNumber(filterLevelMin.value)
+  const maxLevel = toNumber(filterLevelMax.value)
+  const rankExact = toNumber(filterRankExact.value)
+  const minRank = toNumber(filterRankMin.value)
+  const maxRank = toNumber(filterRankMax.value)
+  const linkExact = toNumber(filterLinkExact.value)
+  const minLink = toNumber(filterLinkMin.value)
+  const maxLink = toNumber(filterLinkMax.value)
+  const scaleExact = toNumber(filterScaleExact.value)
+  const minScale = toNumber(filterScaleMin.value)
+  const maxScale = toNumber(filterScaleMax.value)
+  const selectedLinkArrows = getSelectedLinkArrowValues()
+
+  const useMonsterFilters = isMonsterFilterMode()
+  const useSpellFilters = isSpellFilterMode()
+  const useTrapFilters = isTrapFilterMode()
+
+  const filtered = rows.filter((row) => {
+    const searchable = [
+      row.name,
+      row.set_name,
+      row.set_code,
+      row.rarity,
+      row.edition,
+      row.type,
+      row.race,
+      row.attribute,
+      row.archetype
+    ].map(safeText).join(" ").toLowerCase()
+
+    const rowAttribute = safeText(row.attribute).toUpperCase()
+    const rowType = safeText(row.type)
+    const rowRace = safeText(row.race)
+
+    const rawLevel = toNumber(row.level)
+    const rowAtk = toNumber(row.atk)
+    const rowDef = toNumber(row.def)
+    const rowLevel = isXyzMonster(row) ? null : rawLevel
+    const rowRank = isXyzMonster(row) ? rawLevel : null
+    const rowLink = isLinkMonster(row) ? toNumber(row.linkval ?? row.linkVal) : null
+    const rowScale = toNumber(row.scale)
+    const rowLinkArrows = getRowLinkArrows(row)
+
+    if (searchTerms.length > 0) {
+      const matchesAnySearchTerm = searchTerms.some((term) => searchable.includes(term))
+      if (!matchesAnySearchTerm) return false
+    }
+
+    if (selectedType && getHighLevelType(row) !== selectedType) return false
+
+    if (useSpellFilters && selectedSpellType) {
+      if (getHighLevelType(row) !== "Spell" || rowRace !== selectedSpellType) return false
+    }
+
+    if (useTrapFilters && selectedTrapType) {
+      if (getHighLevelType(row) !== "Trap" || rowRace !== selectedTrapType) return false
+    }
+
+    if (useMonsterFilters && selectedAttribute && rowAttribute !== selectedAttribute) return false
+    if (useMonsterFilters && selectedRace && rowRace !== selectedRace) return false
+
+    if (useMonsterFilters && selectedSubtypes.length > 0) {
+      const matchesAllSelectedSubtypes = selectedSubtypes.every((subtype) =>
+        rowType.toLowerCase().includes(subtype.toLowerCase())
+      )
+      if (!matchesAllSelectedSubtypes) return false
+    }
+
+    if (useMonsterFilters && atkExact !== null && (rowAtk === null || rowAtk !== atkExact)) return false
+    if (useMonsterFilters && minAtk !== null && (rowAtk === null || rowAtk < minAtk)) return false
+    if (useMonsterFilters && maxAtk !== null && (rowAtk === null || rowAtk > maxAtk)) return false
+
+    if (useMonsterFilters && defExact !== null && (rowDef === null || rowDef !== defExact)) return false
+    if (useMonsterFilters && minDef !== null && (rowDef === null || rowDef < minDef)) return false
+    if (useMonsterFilters && maxDef !== null && (rowDef === null || rowDef > maxDef)) return false
+
+    if (useMonsterFilters && levelExact !== null && (rowLevel === null || rowLevel !== levelExact)) return false
+    if (useMonsterFilters && minLevel !== null && (rowLevel === null || rowLevel < minLevel)) return false
+    if (useMonsterFilters && maxLevel !== null && (rowLevel === null || rowLevel > maxLevel)) return false
+
+    if (useMonsterFilters && rankExact !== null && (rowRank === null || rowRank !== rankExact)) return false
+    if (useMonsterFilters && minRank !== null && (rowRank === null || rowRank < minRank)) return false
+    if (useMonsterFilters && maxRank !== null && (rowRank === null || rowRank > maxRank)) return false
+
+    if (useMonsterFilters && linkExact !== null && (rowLink === null || rowLink !== linkExact)) return false
+    if (useMonsterFilters && minLink !== null && (rowLink === null || rowLink < minLink)) return false
+    if (useMonsterFilters && maxLink !== null && (rowLink === null || rowLink > maxLink)) return false
+
+    if (useMonsterFilters && scaleExact !== null && (rowScale === null || rowScale !== scaleExact)) return false
+    if (useMonsterFilters && minScale !== null && (rowScale === null || rowScale < minScale)) return false
+    if (useMonsterFilters && maxScale !== null && (rowScale === null || rowScale > maxScale)) return false
+
+    if (useMonsterFilters && selectedLinkArrows.length > 0) {
+      if (!isLinkMonster(row)) return false
+      const matchesAllSelectedArrows = selectedLinkArrows.every((arrow) => rowLinkArrows.includes(arrow))
+      if (!matchesAllSelectedArrows) return false
+    }
+
+    return true
+  })
+
+  filtered.sort((a, b) => {
+    const result = compareSortValues(
+      getSortValue(a, binderSort.value),
+      getSortValue(b, binderSort.value),
+      binderSortDirection
+    )
+
+    if (result !== 0) return result
+
+    return safeText(a.name).localeCompare(safeText(b.name), undefined, {
+      sensitivity: "base"
+    })
+  })
+
+  return filtered
+}
+
+function isExtraDeckCard(row) {
+  const type = safeText(row?.type).toLowerCase()
+  return type.includes("fusion") || type.includes("synchro") || type.includes("xyz") || type.includes("link")
+}
+
+function defaultDeckSectionForRow(row) {
+  return isExtraDeckCard(row) ? "extra" : "main"
+}
+
+function canCardGoToSection(row, section) {
+  if (!row) return false
+  if (section === "side") return true
+  if (section === "extra") return isExtraDeckCard(row)
+  if (section === "main") return !isExtraDeckCard(row)
+  return false
+}
+
+function resolveTargetSection(row, requestedTarget = activeDestination) {
+  if (requestedTarget === "auto") {
+    return defaultDeckSectionForRow(row)
+  }
+  return requestedTarget
+}
+
+function getUsedCount(cardKey) {
+  return deckState.main.filter((value) => value === cardKey).length
+    + deckState.extra.filter((value) => value === cardKey).length
+    + deckState.side.filter((value) => value === cardKey).length
+}
+
+function getOwnedCount(cardKey) {
+  return toNumber(poolByKey.get(cardKey)?.quantity) || 0
+}
+
+function getRemainingCount(cardKey) {
+  return Math.max(getOwnedCount(cardKey) - getUsedCount(cardKey), 0)
+}
+
+function getAddBlockedReason(cardKey, requestedTarget = activeDestination) {
+  const row = poolByKey.get(cardKey)
+  if (!row) return "Card not found in binder"
+  if (!normalizeCardId(cardKey)) return "Missing numeric card id"
+
+  const section = resolveTargetSection(row, requestedTarget)
+  if (!canCardGoToSection(row, section)) {
+    if (section === "extra") return "This card cannot go to Extra"
+    if (section === "main") return "This card belongs in Extra or Side"
+    return "This card cannot go there"
+  }
+
+  if (getRemainingCount(cardKey) <= 0) return "No copies left"
+  if (deckState[section].length >= DECK_LIMITS[section]) return `${section[0].toUpperCase()}${section.slice(1)} deck is full`
+
+  return ""
+}
+
+function saveDeckState() {
+  const key = getStorageKey()
+  if (!key) return
+
+  try {
+    localStorage.setItem(key, JSON.stringify(deckState))
+  } catch {
+  }
+}
+
+function sanitizeDeckState(candidate) {
+  const next = {
+    main: [],
+    extra: [],
+    side: []
+  }
+
+  const remainingByKey = new Map(
+    poolRows.map((row) => [row._deckKey, toNumber(row.quantity) || 0])
+  )
+
+  for (const section of ["main", "extra", "side"]) {
+    const values = Array.isArray(candidate?.[section]) ? candidate[section] : []
+
+    for (const rawKey of values) {
+      const cardKey = normalizeCardId(rawKey)
+      const row = poolByKey.get(cardKey)
+      if (!row) continue
+      if (!canCardGoToSection(row, section)) continue
+      if ((remainingByKey.get(cardKey) || 0) <= 0) continue
+      if (next[section].length >= DECK_LIMITS[section]) continue
+
+      next[section].push(cardKey)
+      remainingByKey.set(cardKey, (remainingByKey.get(cardKey) || 0) - 1)
+    }
+  }
+
+  deckState = next
+}
+
+function loadStoredDeckState() {
+  const key = getStorageKey()
+  if (!key) {
+    deckState = { main: [], extra: [], side: [] }
+    return
+  }
+
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) {
+      deckState = { main: [], extra: [], side: [] }
+      return
+    }
+
+    const parsed = JSON.parse(raw)
+    sanitizeDeckState(parsed)
+  } catch {
+    deckState = { main: [], extra: [], side: [] }
+  }
+}
+
+function buildPoolRows(rows) {
+  const byKey = new Map()
+
+  for (const rawRow of rows || []) {
+    const cardKey = normalizeCardId(
+      rawRow?.cardid ?? rawRow?.cardId ?? rawRow?.id ?? rawRow?.passcode ?? rawRow?.image_id ?? rawRow?.imageId
+    )
+
+    if (!cardKey) continue
+
+    const quantity = toNumber(rawRow?.quantity) || 1
+    const setCode = safeText(rawRow?.set_code)
+
+    if (!byKey.has(cardKey)) {
+      byKey.set(cardKey, {
+        ...rawRow,
+        _deckKey: cardKey,
+        quantity,
+        _setCodes: setCode ? new Set([setCode]) : new Set(),
+        _duplicateRows: 1
+      })
+      continue
+    }
+
+    const existing = byKey.get(cardKey)
+    existing.quantity = (toNumber(existing.quantity) || 0) + quantity
+    existing._duplicateRows += 1
+    if (setCode) existing._setCodes.add(setCode)
+  }
+
+  poolRows = Array.from(byKey.values()).map((row) => {
+    const setCodes = Array.from(row._setCodes || [])
+    const primarySetCode = setCodes[0] || safeText(row.set_code)
+    const extraPrints = Math.max(setCodes.length - 1, 0)
+
+    return {
+      ...row,
+      set_code: primarySetCode,
+      set_code_display: extraPrints > 0 ? `${primarySetCode} +${extraPrints} more` : primarySetCode,
+      _setCodes: setCodes
+    }
+  })
+
+  poolByKey = new Map(poolRows.map((row) => [row._deckKey, row]))
+}
+
+async function loadPlayerContext() {
+  if (!currentPlayer) {
+    binderRows = []
+    currentBinderRows = []
+    poolRows = []
+    poolByKey = new Map()
+    deckState = { main: [], extra: [], side: [] }
+    renderAll()
+    return
+  }
+
+  setStatus(`Loading ${getPlayerLabel(currentPlayer)} binder...`)
+  binderStatus.textContent = "Loading your binder..."
+  binderGrid.innerHTML = ""
+
+  const [binderResp] = await Promise.all([
+    fetch(`/api/deckbuilder/binder?player=${encodeURIComponent(currentPlayer)}`, {
+      cache: "no-store",
+      credentials: "same-origin"
+    }),
+    loadArtworkManifest().catch(() => ({})),
+    loadArtworkPrefsForPlayer(currentPlayer).catch(() => {
+      artworkPrefs = {}
+      artworkPrefsPlayer = currentPlayer
+      return {}
+    })
+  ])
+
+  if (binderResp.status === 401) {
+    currentUser = null
+    renderAuth()
+    buildTabs()
+    renderAccessState()
+    setStatus("Log in with Discord to use the deck builder.")
+    return
+  }
+
+  const data = await binderResp.json().catch(() => ({}))
+
+  if (!binderResp.ok) {
+    throw new Error(data?.error || "Failed to load binder.")
+  }
+
+  binderRows = Array.isArray(data?.binder) ? data.binder : []
+  currentPlayer = safeText(data?.player) || currentPlayer
+  buildTabs()
+  buildPoolRows(binderRows)
+  currentBinderRows = poolRows.slice()
+  loadStoredDeckState()
+  setStatus(`Loaded ${getPlayerLabel(currentPlayer)} binder.`)
+  renderAll()
+}
+
+function addCardToSection(cardKey, requestedTarget = activeDestination) {
+  const row = poolByKey.get(cardKey)
+  const blockReason = getAddBlockedReason(cardKey, requestedTarget)
+  if (blockReason) {
+    setStatus(blockReason)
+    return false
+  }
+
+  const section = resolveTargetSection(row, requestedTarget)
+  deckState[section].push(cardKey)
+  saveDeckState()
+  renderAll()
+  return true
+}
+
+function removeOneCardFromSection(section, cardKey) {
+  const index = deckState[section].indexOf(cardKey)
+  if (index === -1) return
+  deckState[section].splice(index, 1)
+  saveDeckState()
+  renderAll()
+}
+
+function removeAllCardCopiesFromSection(section, cardKey) {
+  deckState[section] = deckState[section].filter((value) => value !== cardKey)
+  saveDeckState()
+  renderAll()
+}
+
+function clearDeckState() {
+  deckState = { main: [], extra: [], side: [] }
+  saveDeckState()
+  renderAll()
+}
+
+function getAddButtonLabel(cardKey) {
+  const row = poolByKey.get(cardKey)
+  if (!row) return "Add"
+
+  const section = resolveTargetSection(row, activeDestination)
+  const blockReason = getAddBlockedReason(cardKey, activeDestination)
+  if (blockReason === "No copies left") return "No copies left"
+  if (blockReason) return blockReason
+
+  if (activeDestination === "auto") {
+    return `Add to ${section === "extra" ? "Extra" : "Main"}`
+  }
+
+  return `Add to ${section[0].toUpperCase()}${section.slice(1)}`
+}
+
+function renderPool() {
+  const filtered = applyBinderFilters(currentBinderRows)
+  const totalCopies = filtered.reduce((sum, row) => sum + (toNumber(row.quantity) || 1), 0)
+
+  binderStatus.textContent = `Showing ${totalCopies} copies across ${filtered.length} unique cards`
+  binderGrid.innerHTML = ""
+
+  if (!filtered.length) {
+    binderGrid.innerHTML = '<p class="muted">No cards matched your filters.</p>'
+    return
+  }
+
+  filtered.forEach((row) => {
+    const cardKey = row._deckKey
+    const previewImageUrl = getBinderPreviewImage(row)
+    const modalImageUrl = getBinderModalImage(row)
+    const usedCount = getUsedCount(cardKey)
+    const remainingCount = getRemainingCount(cardKey)
+    const blockReason = getAddBlockedReason(cardKey, activeDestination)
+
+    const card = document.createElement("article")
+    card.className = "binder-card deckbuilder-pool-card"
+
+    card.innerHTML = `
+      <div class="binder-image-wrap">
+        ${previewImageUrl
+          ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" />`
+          : '<div class="binder-no-image">No Image</div>'}
+        <span class="binder-qty">x${safeText(row.quantity) || "1"}</span>
+        ${usedCount > 0 ? `<span class="deckbuilder-used-pill">Used ${usedCount}</span>` : ""}
+      </div>
+      <div class="deckbuilder-card-copy">
+        <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
+        <div class="binder-code" title="${safeText(row.set_code_display || row.set_code)}">${safeText(row.set_code_display || row.set_code) || "-"}</div>
+        <div class="deckbuilder-card-subtitle">${remainingCount} left in binder</div>
+      </div>
+      <div class="deckbuilder-card-actions">
+        <button type="button" class="button button-secondary deckbuilder-mini-button" data-action="preview">Preview</button>
+        <button type="button" class="button button-primary deckbuilder-mini-button" data-action="add" ${blockReason ? "disabled" : ""}>${getAddButtonLabel(cardKey)}</button>
+      </div>
+    `
+
+    card.querySelector('[data-action="preview"]').addEventListener("click", () => {
+      if (modalImageUrl) {
+        openModal(modalImageUrl, safeText(row.name) || "Card Image")
+      }
+    })
+
+    card.querySelector('[data-action="add"]').addEventListener("click", () => {
+      addCardToSection(cardKey, activeDestination)
+    })
+
+    binderGrid.appendChild(card)
+  })
+}
+
+function collapseSection(section) {
+  const counts = new Map()
+
+  for (const cardKey of deckState[section]) {
+    counts.set(cardKey, (counts.get(cardKey) || 0) + 1)
+  }
+
+  return Array.from(counts.entries())
+    .map(([cardKey, count]) => ({
+      cardKey,
+      count,
+      row: poolByKey.get(cardKey)
+    }))
+    .filter((item) => item.row)
+    .sort((a, b) => safeText(a.row.name).localeCompare(safeText(b.row.name), undefined, { sensitivity: "base" }))
+}
+
+function renderSection(section, container, labelElement) {
+  const items = collapseSection(section)
+  const totalCount = deckState[section].length
+  const sectionName = section[0].toUpperCase() + section.slice(1)
+
+  labelElement.textContent = `${totalCount} card${totalCount === 1 ? "" : "s"}`
+  container.innerHTML = ""
+
+  if (!items.length) {
+    container.innerHTML = `<div class="deckbuilder-section-empty">No cards in ${sectionName.toLowerCase()} yet.</div>`
+    return
+  }
+
+  items.forEach(({ cardKey, count, row }) => {
+    const previewImageUrl = getBinderPreviewImage(row)
+    const canAddMore = !getAddBlockedReason(cardKey, section)
+    const item = document.createElement("div")
+    item.className = "deckbuilder-section-item"
+
+    item.innerHTML = `
+      <button type="button" class="deckbuilder-section-preview" data-action="preview">
+        ${previewImageUrl
+          ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="deckbuilder-section-thumb" loading="lazy" />`
+          : '<span class="deckbuilder-section-thumb deckbuilder-section-thumb-empty">No image</span>'}
+      </button>
+      <div class="deckbuilder-section-copy">
+        <div class="deckbuilder-section-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
+        <div class="deckbuilder-section-subtitle">${safeText(row.set_code_display || row.set_code) || "-"} - Owned x${safeText(row.quantity) || "1"}</div>
+      </div>
+      <div class="deckbuilder-section-controls">
+        <button type="button" class="deckbuilder-control-button" data-action="minus">-</button>
+        <span class="deckbuilder-section-count">${count}</span>
+        <button type="button" class="deckbuilder-control-button" data-action="plus" ${canAddMore ? "" : "disabled"}>+</button>
+        <button type="button" class="deckbuilder-remove-button" data-action="remove">Remove</button>
+      </div>
+    `
+
+    item.querySelector('[data-action="preview"]').addEventListener("click", () => {
+      const modalImageUrl = getBinderModalImage(row)
+      if (modalImageUrl) {
+        openModal(modalImageUrl, safeText(row.name) || "Card Image")
+      }
+    })
+
+    item.querySelector('[data-action="minus"]').addEventListener("click", () => {
+      removeOneCardFromSection(section, cardKey)
+    })
+
+    item.querySelector('[data-action="plus"]').addEventListener("click", () => {
+      addCardToSection(cardKey, section)
+    })
+
+    item.querySelector('[data-action="remove"]').addEventListener("click", () => {
+      removeAllCardCopiesFromSection(section, cardKey)
+    })
+
+    container.appendChild(item)
+  })
+}
+
+function renderSummary() {
+  const mainTotal = deckState.main.length
+  const extraTotal = deckState.extra.length
+  const sideTotal = deckState.side.length
+  const totalUsed = mainTotal + extraTotal + sideTotal
+
+  mainCount.textContent = String(mainTotal)
+  extraCount.textContent = String(extraTotal)
+  sideCount.textContent = String(sideTotal)
+  totalUsedCount.textContent = String(totalUsed)
+
+  const warnings = []
+  if (mainTotal < 40) warnings.push("Main is under 40")
+  if (mainTotal > 60) warnings.push("Main is over 60")
+  if (extraTotal > 15) warnings.push("Extra is over 15")
+  if (sideTotal > 15) warnings.push("Side is over 15")
+
+  if (!totalUsed) {
+    exportHint.textContent = "Your draft is empty."
+  } else if (warnings.length) {
+    exportHint.textContent = warnings.join(" | ")
+  } else {
+    exportHint.textContent = `Ready to export ${getPlayerLabel(currentPlayer)}.ydk`
+  }
+
+  const targetMessages = {
+    auto: "Auto sends Fusion, Synchro, Xyz and Link monsters to Extra. Everything else goes to Main.",
+    main: "Force every added card into Main. Extra-only cards stay blocked.",
+    extra: "Force every added card into Extra. Main deck cards stay blocked.",
+    side: "Add every clicked card into Side."
+  }
+
+  targetHint.textContent = targetMessages[activeDestination] || targetMessages.auto
+}
+
+function buildYdkText() {
+  const mainIds = deckState.main.map(formatYdkCardId).filter(Boolean)
+  const extraIds = deckState.extra.map(formatYdkCardId).filter(Boolean)
+  const sideIds = deckState.side.map(formatYdkCardId).filter(Boolean)
+
+  return [
+    `#created by ${getPlayerLabel(currentPlayer) || "Prog with the Bois"}`,
+    "#main",
+    ...mainIds,
+    "#extra",
+    ...extraIds,
+    "!side",
+    ...sideIds,
+    ""
+  ].join("\n")
+}
+
+function exportDeck() {
+  const ydk = buildYdkText()
+  const safeName = safeText(currentPlayer || "deck")
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "deck"
+
+  const blob = new Blob([ydk], { type: "text/plain;charset=utf-8" })
+  const href = URL.createObjectURL(blob)
+  const anchor = document.createElement("a")
+  anchor.href = href
+  anchor.download = `${safeName}.ydk`
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(href)
+  setStatus(`Exported ${safeName}.ydk`)
+}
+
+function renderTargetButtons() {
+  targetButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.deckTarget === activeDestination)
+  })
+}
+
+function renderAll() {
+  renderTargetButtons()
+  renderSummary()
+  renderPool()
+  renderSection("main", mainList, mainSectionLabel)
+  renderSection("extra", extraList, extraSectionLabel)
+  renderSection("side", sideList, sideSectionLabel)
+}
+
+closeModalButton.addEventListener("click", closeModal)
+
+modal.addEventListener("click", (event) => {
+  if (event.target.dataset.close === "true") closeModal()
+})
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && modal.classList.contains("is-open")) closeModal()
+})
+
+binderSearch.addEventListener("input", () => renderPool())
+filterType.addEventListener("change", () => {
+  syncFilterVisibility()
+  renderPool()
+})
+filterAttribute.addEventListener("change", () => renderPool())
+filterRace.addEventListener("change", () => renderPool())
+filterSpellType.addEventListener("change", () => renderPool())
+filterTrapType.addEventListener("change", () => renderPool())
+filterSubtypes.addEventListener("change", (event) => {
+  if (event.target.matches('input[type="checkbox"]')) renderPool()
+})
+filterAtkExact.addEventListener("input", () => renderPool())
+filterAtkMin.addEventListener("input", () => renderPool())
+filterAtkMax.addEventListener("input", () => renderPool())
+filterDefExact.addEventListener("input", () => renderPool())
+filterDefMin.addEventListener("input", () => renderPool())
+filterDefMax.addEventListener("input", () => renderPool())
+filterLevelExact.addEventListener("input", () => renderPool())
+filterLevelMin.addEventListener("input", () => renderPool())
+filterLevelMax.addEventListener("input", () => renderPool())
+filterRankExact.addEventListener("input", () => renderPool())
+filterRankMin.addEventListener("input", () => renderPool())
+filterRankMax.addEventListener("input", () => renderPool())
+filterLinkExact.addEventListener("input", () => renderPool())
+filterLinkMin.addEventListener("input", () => renderPool())
+filterLinkMax.addEventListener("input", () => renderPool())
+filterScaleExact.addEventListener("input", () => renderPool())
+filterScaleMin.addEventListener("input", () => renderPool())
+filterScaleMax.addEventListener("input", () => renderPool())
+filterLinkArrows.addEventListener("change", (event) => {
+  if (event.target.matches('input[type="checkbox"]')) renderPool()
+})
+
+binderSort.addEventListener("change", () => renderPool())
+binderSortDirectionButton.addEventListener("click", () => {
+  binderSortDirection = binderSortDirection === "asc" ? "desc" : "asc"
+  updateSortDirectionButton()
+  renderPool()
+})
+toggleFiltersButton.addEventListener("click", () => {
+  setBinderFiltersCollapsed(!binderFiltersCollapsed)
+})
+
+logoutButton.addEventListener("click", logout)
+
+clearDeckButton.addEventListener("click", () => {
+  const totalCards = deckState.main.length + deckState.extra.length + deckState.side.length
+  if (!totalCards) return
+  if (window.confirm("Clear the whole draft?")) {
+    clearDeckState()
+    setStatus("Cleared current draft.")
+  }
+})
+
+exportButton.addEventListener("click", () => {
+  exportDeck()
+})
+
+targetButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeDestination = safeText(button.dataset.deckTarget) || "auto"
+    renderAll()
+  })
+})
+
+async function init() {
+  try {
+    await loadMe()
+    renderAuth()
+    buildTabs()
+    renderAccessState()
+    syncFilterVisibility()
+    updateSortDirectionButton()
+    setBinderFiltersCollapsed(binderFiltersCollapsed)
+
+    if (currentPlayer) {
+      await loadPlayerContext()
+    } else if (isLoggedIn()) {
+      setStatus("Logged in, but no binder is assigned to this Discord account.")
+      renderAll()
+    } else {
+      setStatus("Log in with Discord to build a deck from your binder.")
+      renderAll()
+    }
+  } catch (error) {
+    console.error(error)
+    setStatus(error?.message || "Failed to load deck builder.")
+  }
+}
+
+init()

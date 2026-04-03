@@ -2050,3 +2050,354 @@ p{color:var(--ink-soft)}
 .legal-list li + li{
   margin-top:8px;
 }
+/* DECK BUILDER */
+
+.nav-feature-link,
+.nav-artwork-link{
+  border:1px solid var(--accent) !important;
+  background:linear-gradient(135deg, rgba(94,200,255,0.24), rgba(193,35,136,0.22));
+  color:#ffffff !important;
+  font-weight:800 !important;
+  box-shadow:0 0 0 1px rgba(94,200,255,0.14), 0 0 24px rgba(94,200,255,0.12);
+}
+
+.nav-feature-link:hover,
+.nav-artwork-link:hover{
+  border-color:var(--accent) !important;
+  background:linear-gradient(135deg, rgba(94,200,255,0.30), rgba(196,92,255,0.24));
+  transform:translateY(-2px);
+  box-shadow:0 0 0 1px rgba(94,200,255,0.18), 0 0 26px rgba(94,200,255,0.16);
+}
+
+.deckbuilder-page-card{
+  padding:28px;
+}
+
+.deckbuilder-toolbar-grid{
+  align-items:stretch;
+}
+
+.deckbuilder-auth-box{
+  min-height:56px;
+}
+
+.deckbuilder-shell{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.deckbuilder-summary-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+
+.deckbuilder-actions-row{
+  display:grid;
+  grid-template-columns:minmax(0, 1.35fr) minmax(320px, 0.9fr);
+  gap:16px;
+}
+
+.deckbuilder-target-box,
+.deckbuilder-export-box{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:18px;
+  border:2px solid var(--line);
+  border-radius:20px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
+.deckbuilder-target-group{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.deckbuilder-target-button{
+  min-height:42px;
+  padding:10px 16px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:rgba(255,255,255,0.03);
+  color:#edf3ff;
+  font-weight:800;
+  cursor:pointer;
+  transition:0.18s ease;
+}
+
+.deckbuilder-target-button:hover{
+  transform:translateY(-1px);
+  border-color:var(--accent);
+}
+
+.deckbuilder-target-button.is-active{
+  background:linear-gradient(135deg, rgba(94,200,255,0.18), rgba(141,91,255,0.20));
+  border-color:var(--accent);
+  box-shadow:0 0 0 1px rgba(94,200,255,0.10);
+}
+
+.deckbuilder-target-hint,
+.deckbuilder-export-hint{
+  margin:0;
+}
+
+.deckbuilder-export-box .button{
+  width:100%;
+}
+
+.deckbuilder-layout{
+  display:grid;
+  grid-template-columns:minmax(0, 1.65fr) minmax(320px, 0.95fr);
+  gap:16px;
+  align-items:start;
+}
+
+.deckbuilder-pool-card-shell{
+  padding:0;
+  overflow:hidden;
+}
+
+.deckbuilder-pool-grid{
+  min-height:240px;
+}
+
+.deckbuilder-pool-card{
+  grid-template-rows:auto auto auto;
+}
+
+.deckbuilder-card-copy{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:10px 2px 0;
+}
+
+.deckbuilder-card-title{
+  color:#f3f7ff;
+  font-size:0.95rem;
+  font-weight:800;
+  line-height:1.2;
+}
+
+.deckbuilder-card-subtitle{
+  color:#b8c5f1;
+  font-size:0.78rem;
+  font-weight:700;
+}
+
+.deckbuilder-card-actions{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  padding-top:10px;
+}
+
+.deckbuilder-mini-button{
+  width:100%;
+  min-height:38px;
+  padding:8px 10px;
+  justify-content:center;
+}
+
+.deckbuilder-used-pill{
+  position:absolute;
+  bottom:8px;
+  left:8px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.20);
+  background:rgba(12,16,36,0.82);
+  color:#f5f8ff;
+  font-size:0.68rem;
+  font-weight:800;
+  z-index:2;
+}
+
+.deckbuilder-sidebar{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.deckbuilder-section-card{
+  padding:18px;
+}
+
+.deckbuilder-section-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.deckbuilder-section-head h4{
+  margin:6px 0 0;
+}
+
+.deckbuilder-section-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.deckbuilder-section-item{
+  display:grid;
+  grid-template-columns:72px minmax(0, 1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:12px;
+  border:1px solid var(--inner-line);
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}
+
+.deckbuilder-section-preview{
+  width:72px;
+  height:100px;
+  padding:0;
+  border:none;
+  border-radius:12px;
+  overflow:hidden;
+  background:#090d1f;
+  cursor:pointer;
+}
+
+.deckbuilder-section-thumb{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.deckbuilder-section-thumb-empty{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#b2bfef;
+  font-size:0.72rem;
+  font-weight:700;
+}
+
+.deckbuilder-section-copy{
+  min-width:0;
+}
+
+.deckbuilder-section-title{
+  color:#f3f7ff;
+  font-size:0.96rem;
+  font-weight:800;
+  line-height:1.25;
+}
+
+.deckbuilder-section-subtitle{
+  margin-top:6px;
+  color:#b8c5f1;
+  font-size:0.76rem;
+  font-weight:700;
+}
+
+.deckbuilder-section-controls{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.deckbuilder-control-button,
+.deckbuilder-remove-button{
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(255,255,255,0.04);
+  color:#edf3ff;
+  font-weight:800;
+  cursor:pointer;
+  transition:0.18s ease;
+}
+
+.deckbuilder-control-button:hover,
+.deckbuilder-remove-button:hover{
+  transform:translateY(-1px);
+  border-color:var(--accent);
+}
+
+.deckbuilder-control-button:disabled{
+  opacity:0.45;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.deckbuilder-section-count{
+  min-width:28px;
+  text-align:center;
+  color:#f5f8ff;
+  font-weight:800;
+}
+
+.deckbuilder-section-empty{
+  padding:18px;
+  border:1px dashed rgba(255,255,255,0.16);
+  border-radius:16px;
+  color:var(--ink-soft);
+  text-align:center;
+  font-weight:600;
+}
+
+@media (max-width: 1180px){
+  .deckbuilder-layout{
+    grid-template-columns:1fr;
+  }
+
+  .deckbuilder-sidebar{
+    order:-1;
+  }
+}
+
+@media (max-width: 920px){
+  .deckbuilder-summary-grid{
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+  }
+
+  .deckbuilder-actions-row{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 700px){
+  .deckbuilder-page-card{
+    padding:20px;
+  }
+
+  .deckbuilder-section-item{
+    grid-template-columns:60px minmax(0, 1fr);
+  }
+
+  .deckbuilder-section-preview{
+    width:60px;
+    height:84px;
+  }
+
+  .deckbuilder-section-controls{
+    grid-column:1 / -1;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+  }
+}
+
+@media (max-width: 560px){
+  .deckbuilder-summary-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .deckbuilder-target-group{
+    flex-direction:column;
+  }
+
+  .deckbuilder-target-button{
+    width:100%;
+  }
+}
