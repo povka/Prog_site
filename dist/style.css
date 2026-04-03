@@ -3071,3 +3071,40 @@ p{color:var(--ink-soft)}
     height:100%;
   }
 }
+
+@media (min-width: 1181px){
+  html,
+  body{
+    height:auto !important;
+    min-height:100% !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+  }
+
+  body.deckbuilder-body,
+  .deckbuilder-page-shell,
+  .deckbuilder-page-shell > main.section,
+  .deckbuilder-page-shell > main.section > .container,
+  .deckbuilder-page-card,
+  .settings-shell,
+  .deckbuilder-shell,
+  .deckbuilder-layout,
+  .deckbuilder-pool-card-shell,
+  .deckbuilder-sidebar{
+    height:auto !important;
+    max-height:none !important;
+    min-height:0 !important;
+    overflow:visible !important;
+  }
+
+  .deckbuilder-pool-grid,
+  .deckbuilder-section-list,
+  .deckbuilder-preview-scroll{
+    max-height:none !important;
+    overflow:visible !important;
+  }
+
+  .deckbuilder-page-shell > main.section{
+    padding-bottom:32px;
+  }
+}
