@@ -1724,8 +1724,7 @@ function renderPool() {
   const startDisplay = startIndex + 1
   const endDisplay = startIndex + pageRows.length
 
-  binderStatus.textContent = `Showing ${startDisplay}-${endDisplay} of ${filtered.length} unique cards • ${totalCopies} copies`
-
+  binderStatus.textContent = ""
   const fragment = document.createDocumentFragment()
   pageRows.forEach((row) => fragment.appendChild(buildPoolCard(row)))
   binderGrid.appendChild(fragment)
