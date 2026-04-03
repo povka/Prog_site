@@ -2126,6 +2126,7 @@ p{color:var(--ink-soft)}
   border:2px solid var(--line);
   border-radius:20px;
   background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  grid-column:1 / -1;
 }
 
 .deckbuilder-target-group{
