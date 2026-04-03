@@ -42,8 +42,7 @@ const logoutButton = document.getElementById("logoutButton")
 const exportButton = document.getElementById("exportButton")
 const clearDeckButton = document.getElementById("clearDeckButton")
 const exportHint = document.getElementById("exportHint")
-const mainCount = document.getElementById("mainCount")
-const extraCount = document.getElementById("extraCount")
+const deckAuthActions = document.getElementById("deckAuthActions")
 const mainSectionLabel = document.getElementById("mainSectionLabel")
 const extraSectionLabel = document.getElementById("extraSectionLabel")
 const mainList = document.getElementById("mainList")
@@ -301,6 +300,9 @@ function buildTabs() {
 }
 
 function renderAccessState() {
+  const hasAccess = isLoggedIn() && !!getAllowedPlayers().length
+  if (deckAuthActions) deckAuthActions.hidden = !hasAccess
+
   if (!isLoggedIn()) {
     accessNotice.hidden = false
     accessNotice.textContent = "Log in with Discord to load your private binder and build a deck."
@@ -1238,7 +1240,6 @@ function renderSection(section, container, labelElement) {
         <button type="button" class="deckbuilder-control-button" data-action="minus">-</button>
         <span class="deckbuilder-section-count">${count}</span>
         <button type="button" class="deckbuilder-control-button" data-action="plus" ${canAddMore ? "" : "disabled"}>+</button>
-        <button type="button" class="deckbuilder-remove-button" data-action="remove">Remove</button>
       </div>
     `
 
@@ -1255,10 +1256,6 @@ function renderSection(section, container, labelElement) {
       addCardToSection(cardKey, section)
     })
 
-    item.querySelector('[data-action="remove"]').addEventListener("click", () => {
-      removeAllCardCopiesFromSection(section, cardKey)
-    })
-
     container.appendChild(item)
   })
 }
@@ -1267,9 +1264,6 @@ function renderSummary() {
   const mainTotal = deckState.main.length
   const extraTotal = deckState.extra.length
   const totalUsed = mainTotal + extraTotal
-
-  mainCount.textContent = String(mainTotal)
-  extraCount.textContent = String(extraTotal)
 
   const warnings = []
   if (mainTotal < 40) warnings.push("Main is under 40")
