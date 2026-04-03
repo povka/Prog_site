@@ -9,8 +9,7 @@ const IMAGE_VERSION = "2"
 const STORAGE_PREFIX = "prog_deckbuilder_"
 const DECK_LIMITS = {
   main: 60,
-  extra: 15,
-  side: 15
+  extra: 15
 }
 
 let currentUser = null
@@ -25,11 +24,10 @@ let artworkPrefsPlayer = ""
 let artworkManifestByImageId = {}
 let binderSortDirection = "asc"
 let binderFiltersCollapsed = true
-let activeDestination = "auto"
+let previewCardKey = ""
 let deckState = {
   main: [],
-  extra: [],
-  side: []
+  extra: []
 }
 
 const playerTabs = document.getElementById("playerTabs")
@@ -44,18 +42,17 @@ const logoutButton = document.getElementById("logoutButton")
 const exportButton = document.getElementById("exportButton")
 const clearDeckButton = document.getElementById("clearDeckButton")
 const exportHint = document.getElementById("exportHint")
-const targetHint = document.getElementById("targetHint")
-const targetButtons = Array.from(document.querySelectorAll("[data-deck-target]"))
 const mainCount = document.getElementById("mainCount")
 const extraCount = document.getElementById("extraCount")
-const sideCount = document.getElementById("sideCount")
 const totalUsedCount = document.getElementById("totalUsedCount")
 const mainSectionLabel = document.getElementById("mainSectionLabel")
 const extraSectionLabel = document.getElementById("extraSectionLabel")
-const sideSectionLabel = document.getElementById("sideSectionLabel")
 const mainList = document.getElementById("mainList")
 const extraList = document.getElementById("extraList")
-const sideList = document.getElementById("sideList")
+const previewTitle = document.getElementById("previewTitle")
+const previewSubtitle = document.getElementById("previewSubtitle")
+const previewImage = document.getElementById("previewImage")
+const previewEmpty = document.getElementById("previewEmpty")
 
 const filterType = document.getElementById("filterType")
 const filterAttribute = document.getElementById("filterAttribute")
@@ -86,13 +83,6 @@ const binderFiltersPanel = document.getElementById("binderFiltersPanel")
 const toggleFiltersButton = document.getElementById("toggleFiltersButton")
 const binderSort = document.getElementById("binderSort")
 const binderSortDirectionButton = document.getElementById("binderSortDirection")
-
-const modal = document.getElementById("imageModal")
-const modalImage = document.getElementById("modalImage")
-const modalBanlistBadge = document.getElementById("modalBanlistBadge")
-const modalBanlistIcon = document.getElementById("modalBanlistIcon")
-const modalTitle = document.getElementById("modalTitle")
-const closeModalButton = document.getElementById("closeModal")
 
 function safeText(value) {
   return value ? String(value).trim() : ""
@@ -195,6 +185,56 @@ async function loadMe() {
   currentUser = data?.loggedIn && data?.user ? data.user : null
 }
 
+function resetPreview() {
+  previewCardKey = ""
+  previewTitle.textContent = "Select a card"
+  previewSubtitle.textContent = "Left click a card to preview it here. Right click a card to add it to your deck."
+  previewImage.src = ""
+  previewImage.alt = ""
+  previewImage.hidden = true
+  previewEmpty.hidden = false
+}
+
+function refreshPreviewPanel() {
+  if (!previewCardKey) {
+    resetPreview()
+    return
+  }
+
+  const row = poolByKey.get(previewCardKey)
+  if (!row) {
+    resetPreview()
+    return
+  }
+
+  const imageUrl = getBinderModalImage(row)
+  previewTitle.textContent = safeText(row.name) || "Unknown Card"
+  previewSubtitle.textContent = `Owned x${safeText(row.quantity) || "1"} • ${getRemainingCount(previewCardKey)} copies left in binder`
+
+  if (imageUrl) {
+    previewImage.src = imageUrl
+    previewImage.alt = safeText(row.name) || "Card image"
+    previewImage.hidden = false
+    previewEmpty.hidden = true
+  } else {
+    previewImage.src = ""
+    previewImage.alt = ""
+    previewImage.hidden = true
+    previewEmpty.hidden = false
+    previewEmpty.textContent = "No image available for this card."
+  }
+}
+
+function showPreviewForRow(row) {
+  if (!row) {
+    resetPreview()
+    return
+  }
+
+  previewCardKey = normalizeCardId(row._deckKey || row.cardid || row.cardId || row.id || row.passcode)
+  refreshPreviewPanel()
+}
+
 async function logout() {
   await fetch("/auth/logout", {
     method: "POST",
@@ -207,9 +247,10 @@ async function logout() {
   currentBinderRows = []
   poolRows = []
   poolByKey = new Map()
-  deckState = { main: [], extra: [], side: [] }
+  deckState = { main: [], extra: [] }
   artworkPrefs = {}
   artworkPrefsPlayer = ""
+  resetPreview()
   renderAuth()
   buildTabs()
   renderAccessState()
@@ -251,6 +292,7 @@ function buildTabs() {
     btn.addEventListener("click", async () => {
       if (player.key === currentPlayer) return
       currentPlayer = player.key
+      resetPreview()
       buildTabs()
       await loadPlayerContext()
     })
@@ -455,29 +497,6 @@ function getBinderModalImage(row) {
   }
 
   return getDefaultBinderModalImage(row)
-}
-
-function openModal(src, title) {
-  modalImage.src = src
-  modalImage.alt = title
-  modalTitle.textContent = title
-  modalBanlistIcon.src = ""
-  modalBanlistIcon.alt = ""
-  modalBanlistBadge.hidden = true
-  modal.classList.add("is-open")
-  modal.setAttribute("aria-hidden", "false")
-  document.body.classList.add("modal-open")
-}
-
-function closeModal() {
-  modal.classList.remove("is-open")
-  modal.setAttribute("aria-hidden", "true")
-  modalImage.src = ""
-  modalImage.alt = ""
-  modalBanlistIcon.src = ""
-  modalBanlistIcon.alt = ""
-  modalBanlistBadge.hidden = true
-  document.body.classList.remove("modal-open")
 }
 
 function getHighLevelType(row) {
@@ -856,23 +875,22 @@ function defaultDeckSectionForRow(row) {
 
 function canCardGoToSection(row, section) {
   if (!row) return false
-  if (section === "side") return true
   if (section === "extra") return isExtraDeckCard(row)
   if (section === "main") return !isExtraDeckCard(row)
   return false
 }
 
-function resolveTargetSection(row, requestedTarget = activeDestination) {
-  if (requestedTarget === "auto") {
-    return defaultDeckSectionForRow(row)
+function resolveTargetSection(row, requestedTarget = "") {
+  if (requestedTarget === "main" || requestedTarget === "extra") {
+    return requestedTarget
   }
-  return requestedTarget
+
+  return defaultDeckSectionForRow(row)
 }
 
 function getUsedCount(cardKey) {
   return deckState.main.filter((value) => value === cardKey).length
     + deckState.extra.filter((value) => value === cardKey).length
-    + deckState.side.filter((value) => value === cardKey).length
 }
 
 function getOwnedCount(cardKey) {
@@ -883,7 +901,7 @@ function getRemainingCount(cardKey) {
   return Math.max(getOwnedCount(cardKey) - getUsedCount(cardKey), 0)
 }
 
-function getAddBlockedReason(cardKey, requestedTarget = activeDestination) {
+function getAddBlockedReason(cardKey, requestedTarget = "") {
   const row = poolByKey.get(cardKey)
   if (!row) return "Card not found in binder"
   if (!normalizeCardId(cardKey)) return "Missing numeric card id"
@@ -891,7 +909,7 @@ function getAddBlockedReason(cardKey, requestedTarget = activeDestination) {
   const section = resolveTargetSection(row, requestedTarget)
   if (!canCardGoToSection(row, section)) {
     if (section === "extra") return "This card cannot go to Extra"
-    if (section === "main") return "This card belongs in Extra or Side"
+    if (section === "main") return "This card belongs in Extra"
     return "This card cannot go there"
   }
 
@@ -914,15 +932,14 @@ function saveDeckState() {
 function sanitizeDeckState(candidate) {
   const next = {
     main: [],
-    extra: [],
-    side: []
+    extra: []
   }
 
   const remainingByKey = new Map(
     poolRows.map((row) => [row._deckKey, toNumber(row.quantity) || 0])
   )
 
-  for (const section of ["main", "extra", "side"]) {
+  for (const section of ["main", "extra"]) {
     const values = Array.isArray(candidate?.[section]) ? candidate[section] : []
 
     for (const rawKey of values) {
@@ -944,21 +961,21 @@ function sanitizeDeckState(candidate) {
 function loadStoredDeckState() {
   const key = getStorageKey()
   if (!key) {
-    deckState = { main: [], extra: [], side: [] }
+    deckState = { main: [], extra: [] }
     return
   }
 
   try {
     const raw = localStorage.getItem(key)
     if (!raw) {
-      deckState = { main: [], extra: [], side: [] }
+      deckState = { main: [], extra: [] }
       return
     }
 
     const parsed = JSON.parse(raw)
     sanitizeDeckState(parsed)
   } catch {
-    deckState = { main: [], extra: [], side: [] }
+    deckState = { main: [], extra: [] }
   }
 }
 
@@ -995,12 +1012,10 @@ function buildPoolRows(rows) {
   poolRows = Array.from(byKey.values()).map((row) => {
     const setCodes = Array.from(row._setCodes || [])
     const primarySetCode = setCodes[0] || safeText(row.set_code)
-    const extraPrints = Math.max(setCodes.length - 1, 0)
 
     return {
       ...row,
       set_code: primarySetCode,
-      set_code_display: extraPrints > 0 ? `${primarySetCode} +${extraPrints} more` : primarySetCode,
       _setCodes: setCodes
     }
   })
@@ -1014,7 +1029,8 @@ async function loadPlayerContext() {
     currentBinderRows = []
     poolRows = []
     poolByKey = new Map()
-    deckState = { main: [], extra: [], side: [] }
+    deckState = { main: [], extra: [] }
+    resetPreview()
     renderAll()
     return
   }
@@ -1042,6 +1058,7 @@ async function loadPlayerContext() {
     buildTabs()
     renderAccessState()
     setStatus("Log in with Discord to use the deck builder.")
+    resetPreview()
     return
   }
 
@@ -1057,11 +1074,16 @@ async function loadPlayerContext() {
   buildPoolRows(binderRows)
   currentBinderRows = poolRows.slice()
   loadStoredDeckState()
+
+  if (!previewCardKey || !poolByKey.has(previewCardKey)) {
+    resetPreview()
+  }
+
   setStatus(`Loaded ${getPlayerLabel(currentPlayer)} binder.`)
   renderAll()
 }
 
-function addCardToSection(cardKey, requestedTarget = activeDestination) {
+function addCardToSection(cardKey, requestedTarget = "") {
   const row = poolByKey.get(cardKey)
   const blockReason = getAddBlockedReason(cardKey, requestedTarget)
   if (blockReason) {
@@ -1073,6 +1095,7 @@ function addCardToSection(cardKey, requestedTarget = activeDestination) {
   deckState[section].push(cardKey)
   saveDeckState()
   renderAll()
+  setStatus(`Added ${safeText(row?.name) || "card"} to ${section === "extra" ? "Extra" : "Main"}.`)
   return true
 }
 
@@ -1091,25 +1114,9 @@ function removeAllCardCopiesFromSection(section, cardKey) {
 }
 
 function clearDeckState() {
-  deckState = { main: [], extra: [], side: [] }
+  deckState = { main: [], extra: [] }
   saveDeckState()
   renderAll()
-}
-
-function getAddButtonLabel(cardKey) {
-  const row = poolByKey.get(cardKey)
-  if (!row) return "Add"
-
-  const section = resolveTargetSection(row, activeDestination)
-  const blockReason = getAddBlockedReason(cardKey, activeDestination)
-  if (blockReason === "No copies left") return "No copies left"
-  if (blockReason) return blockReason
-
-  if (activeDestination === "auto") {
-    return `Add to ${section === "extra" ? "Extra" : "Main"}`
-  }
-
-  return `Add to ${section[0].toUpperCase()}${section.slice(1)}`
 }
 
 function renderPool() {
@@ -1119,6 +1126,10 @@ function renderPool() {
   binderStatus.textContent = `Showing ${totalCopies} copies across ${filtered.length} unique cards`
   binderGrid.innerHTML = ""
 
+  if (previewCardKey && !poolByKey.has(previewCardKey)) {
+    resetPreview()
+  }
+
   if (!filtered.length) {
     binderGrid.innerHTML = '<p class="muted">No cards matched your filters.</p>'
     return
@@ -1127,13 +1138,15 @@ function renderPool() {
   filtered.forEach((row) => {
     const cardKey = row._deckKey
     const previewImageUrl = getBinderPreviewImage(row)
-    const modalImageUrl = getBinderModalImage(row)
     const usedCount = getUsedCount(cardKey)
     const remainingCount = getRemainingCount(cardKey)
-    const blockReason = getAddBlockedReason(cardKey, activeDestination)
 
     const card = document.createElement("article")
-    card.className = "binder-card deckbuilder-pool-card"
+    card.className = `binder-card deckbuilder-pool-card${cardKey === previewCardKey ? " is-previewed" : ""}`
+    card.tabIndex = 0
+    card.setAttribute("role", "button")
+    card.setAttribute("aria-label", `${safeText(row.name) || "Card"}. Left click to preview, right click to add.`)
+    card.title = "Left click to preview. Right click to add."
 
     card.innerHTML = `
       <div class="binder-image-wrap">
@@ -1145,23 +1158,31 @@ function renderPool() {
       </div>
       <div class="deckbuilder-card-copy">
         <div class="deckbuilder-card-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-        <div class="binder-code" title="${safeText(row.set_code_display || row.set_code)}">${safeText(row.set_code_display || row.set_code) || "-"}</div>
         <div class="deckbuilder-card-subtitle">${remainingCount} left in binder</div>
-      </div>
-      <div class="deckbuilder-card-actions">
-        <button type="button" class="button button-secondary deckbuilder-mini-button" data-action="preview">Preview</button>
-        <button type="button" class="button button-primary deckbuilder-mini-button" data-action="add" ${blockReason ? "disabled" : ""}>${getAddButtonLabel(cardKey)}</button>
       </div>
     `
 
-    card.querySelector('[data-action="preview"]').addEventListener("click", () => {
-      if (modalImageUrl) {
-        openModal(modalImageUrl, safeText(row.name) || "Card Image")
-      }
+    card.addEventListener("click", () => {
+      showPreviewForRow(row)
+      renderPool()
     })
 
-    card.querySelector('[data-action="add"]').addEventListener("click", () => {
-      addCardToSection(cardKey, activeDestination)
+    card.addEventListener("contextmenu", (event) => {
+      event.preventDefault()
+      addCardToSection(cardKey)
+    })
+
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault()
+        showPreviewForRow(row)
+        renderPool()
+      }
+
+      if (event.key === " ") {
+        event.preventDefault()
+        addCardToSection(cardKey)
+      }
     })
 
     binderGrid.appendChild(card)
@@ -1212,7 +1233,7 @@ function renderSection(section, container, labelElement) {
       </button>
       <div class="deckbuilder-section-copy">
         <div class="deckbuilder-section-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>
-        <div class="deckbuilder-section-subtitle">${safeText(row.set_code_display || row.set_code) || "-"} - Owned x${safeText(row.quantity) || "1"}</div>
+        <div class="deckbuilder-section-subtitle">Owned x${safeText(row.quantity) || "1"}</div>
       </div>
       <div class="deckbuilder-section-controls">
         <button type="button" class="deckbuilder-control-button" data-action="minus">-</button>
@@ -1223,10 +1244,8 @@ function renderSection(section, container, labelElement) {
     `
 
     item.querySelector('[data-action="preview"]').addEventListener("click", () => {
-      const modalImageUrl = getBinderModalImage(row)
-      if (modalImageUrl) {
-        openModal(modalImageUrl, safeText(row.name) || "Card Image")
-      }
+      showPreviewForRow(row)
+      renderPool()
     })
 
     item.querySelector('[data-action="minus"]').addEventListener("click", () => {
@@ -1248,19 +1267,16 @@ function renderSection(section, container, labelElement) {
 function renderSummary() {
   const mainTotal = deckState.main.length
   const extraTotal = deckState.extra.length
-  const sideTotal = deckState.side.length
-  const totalUsed = mainTotal + extraTotal + sideTotal
+  const totalUsed = mainTotal + extraTotal
 
   mainCount.textContent = String(mainTotal)
   extraCount.textContent = String(extraTotal)
-  sideCount.textContent = String(sideTotal)
   totalUsedCount.textContent = String(totalUsed)
 
   const warnings = []
   if (mainTotal < 40) warnings.push("Main is under 40")
   if (mainTotal > 60) warnings.push("Main is over 60")
   if (extraTotal > 15) warnings.push("Extra is over 15")
-  if (sideTotal > 15) warnings.push("Side is over 15")
 
   if (!totalUsed) {
     exportHint.textContent = "Your draft is empty."
@@ -1269,21 +1285,11 @@ function renderSummary() {
   } else {
     exportHint.textContent = `Ready to export ${getPlayerLabel(currentPlayer)}.ydk`
   }
-
-  const targetMessages = {
-    auto: "Auto sends Fusion, Synchro, Xyz and Link monsters to Extra. Everything else goes to Main.",
-    main: "Force every added card into Main. Extra-only cards stay blocked.",
-    extra: "Force every added card into Extra. Main deck cards stay blocked.",
-    side: "Add every clicked card into Side."
-  }
-
-  targetHint.textContent = targetMessages[activeDestination] || targetMessages.auto
 }
 
 function buildYdkText() {
   const mainIds = deckState.main.map(formatYdkCardId).filter(Boolean)
   const extraIds = deckState.extra.map(formatYdkCardId).filter(Boolean)
-  const sideIds = deckState.side.map(formatYdkCardId).filter(Boolean)
 
   return [
     `#created by ${getPlayerLabel(currentPlayer) || "Prog with the Bois"}`,
@@ -1292,7 +1298,6 @@ function buildYdkText() {
     "#extra",
     ...extraIds,
     "!side",
-    ...sideIds,
     ""
   ].join("\n")
 }
@@ -1316,30 +1321,13 @@ function exportDeck() {
   setStatus(`Exported ${safeName}.ydk`)
 }
 
-function renderTargetButtons() {
-  targetButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.deckTarget === activeDestination)
-  })
-}
-
 function renderAll() {
-  renderTargetButtons()
+  refreshPreviewPanel()
   renderSummary()
   renderPool()
   renderSection("main", mainList, mainSectionLabel)
   renderSection("extra", extraList, extraSectionLabel)
-  renderSection("side", sideList, sideSectionLabel)
 }
-
-closeModalButton.addEventListener("click", closeModal)
-
-modal.addEventListener("click", (event) => {
-  if (event.target.dataset.close === "true") closeModal()
-})
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && modal.classList.contains("is-open")) closeModal()
-})
 
 binderSearch.addEventListener("input", () => renderPool())
 filterType.addEventListener("change", () => {
@@ -1388,7 +1376,7 @@ toggleFiltersButton.addEventListener("click", () => {
 logoutButton.addEventListener("click", logout)
 
 clearDeckButton.addEventListener("click", () => {
-  const totalCards = deckState.main.length + deckState.extra.length + deckState.side.length
+  const totalCards = deckState.main.length + deckState.extra.length
   if (!totalCards) return
   if (window.confirm("Clear the whole draft?")) {
     clearDeckState()
@@ -1400,15 +1388,9 @@ exportButton.addEventListener("click", () => {
   exportDeck()
 })
 
-targetButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    activeDestination = safeText(button.dataset.deckTarget) || "auto"
-    renderAll()
-  })
-})
-
 async function init() {
   try {
+    resetPreview()
     await loadMe()
     renderAuth()
     buildTabs()

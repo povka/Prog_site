@@ -6,330 +6,310 @@
   <title>Deck Builder</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
-  <header class="site-header">
-    <div class="container header-inner">
+<body class="deckbuilder-body">
+  <aside class="deckbuilder-preview-rail" aria-live="polite">
+    <div class="deckbuilder-preview-card">
       <div>
-        <p class="eyebrow">Prog Site</p>
-        <h1>Deck Builder</h1>
+        <p class="eyebrow">Card Preview</p>
+        <h2 id="previewTitle">Select a card</h2>
+        <p id="previewSubtitle" class="deckbuilder-preview-subtitle">Left click a card to preview it here. Right click a card to add it to your deck.</p>
       </div>
 
-      <nav class="nav">
-        <a href="/index.html">Home</a>
-        <a href="/settings.html">Artwork Settings</a>
-        <a href="/deckbuilder.html" class="nav-feature-link">Deck Builder</a>
-      </nav>
+      <div class="deckbuilder-preview-image-shell">
+        <img id="previewImage" class="deckbuilder-preview-image" src="" alt="" hidden />
+        <div id="previewEmpty" class="deckbuilder-preview-empty">No card selected yet.</div>
+      </div>
     </div>
-  </header>
+  </aside>
 
-  <main class="section">
-    <div class="container">
-      <div class="section-heading">
+  <div class="deckbuilder-page-shell">
+    <header class="site-header">
+      <div class="container header-inner">
         <div>
-          <p class="eyebrow">Private binder builder</p>
-          <h3>Build from your own pool and export a .ydk</h3>
+          <p class="eyebrow">Prog Site</p>
+          <h1>Deck Builder</h1>
         </div>
-        <p class="muted">Uses the same Discord to player mapping as artwork preferences.</p>
+
+        <nav class="nav">
+          <a href="/index.html">Home</a>
+          <a href="/settings.html">Artwork Settings</a>
+          <a href="/deckbuilder.html" class="nav-feature-link">Deck Builder</a>
+        </nav>
       </div>
+    </header>
 
-      <section class="card deckbuilder-page-card">
-        <div class="settings-shell">
-          <div class="settings-player-tabs" id="playerTabs"></div>
-
-          <div class="settings-toolbar-grid deckbuilder-toolbar-grid">
-            <input
-              type="text"
-              id="binderSearch"
-              class="deck-search"
-              placeholder="Search card name, set, code, type, archetype - use | for multiple cards"
-            />
-
-            <div class="settings-auth-box deckbuilder-auth-box">
-              <div class="settings-auth-actions settings-auth-actions-single">
-                <a href="/auth/discord/login?returnTo=%2Fdeckbuilder.html" id="loginButton" class="button button-primary">Log in with Discord</a>
-                <button type="button" id="logoutButton" class="button button-secondary" style="display:none;">Log out</button>
-              </div>
-            </div>
-
-            <div class="deck-results-label settings-status" id="statusText">Loading...</div>
+    <main class="section">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Private binder builder</p>
+            <h3>Build from your own pool and export a .ydk</h3>
           </div>
+          <p class="muted">Uses the same Discord to player mapping as artwork preferences.</p>
+        </div>
 
-          <div id="accessNotice" class="settings-empty" hidden></div>
+        <section class="card deckbuilder-page-card">
+          <div class="settings-shell">
+            <div class="settings-player-tabs" id="playerTabs"></div>
 
-          <div id="builderShell" class="deckbuilder-shell" hidden>
-            <div class="deckbuilder-summary-grid">
-              <article class="mini-card">
-                <span>Main Deck</span>
-                <strong id="mainCount">0</strong>
-              </article>
-              <article class="mini-card">
-                <span>Extra Deck</span>
-                <strong id="extraCount">0</strong>
-              </article>
-              <article class="mini-card">
-                <span>Side Deck</span>
-                <strong id="sideCount">0</strong>
-              </article>
-              <article class="mini-card">
-                <span>Total Used</span>
-                <strong id="totalUsedCount">0</strong>
-              </article>
-            </div>
+            <div class="settings-toolbar-grid deckbuilder-toolbar-grid">
+              <input
+                type="text"
+                id="binderSearch"
+                class="deck-search"
+                placeholder="Search card name, type, archetype - use | for multiple cards"
+              />
 
-            <div class="deckbuilder-actions-row">
-              <div class="deckbuilder-target-box">
-                <span class="section-label">Add to</span>
-                <div class="deckbuilder-target-group" id="targetGroup">
-                  <button type="button" class="deckbuilder-target-button is-active" data-deck-target="auto">Auto</button>
-                  <button type="button" class="deckbuilder-target-button" data-deck-target="main">Main</button>
-                  <button type="button" class="deckbuilder-target-button" data-deck-target="extra">Extra</button>
-                  <button type="button" class="deckbuilder-target-button" data-deck-target="side">Side</button>
+              <div class="settings-auth-box deckbuilder-auth-box">
+                <div class="settings-auth-actions settings-auth-actions-single">
+                  <a href="/auth/discord/login?returnTo=%2Fdeckbuilder.html" id="loginButton" class="button button-primary">Log in with Discord</a>
+                  <button type="button" id="logoutButton" class="button button-secondary" style="display:none;">Log out</button>
                 </div>
-                <p id="targetHint" class="deckbuilder-target-hint">Auto sends Fusion, Synchro, Xyz and Link monsters to Extra. Everything else goes to Main.</p>
               </div>
 
-              <div class="deckbuilder-export-box">
-                <button type="button" id="exportButton" class="button button-primary">Export .ydk</button>
-                <button type="button" id="clearDeckButton" class="button button-secondary">Clear deck</button>
-                <p id="exportHint" class="muted deckbuilder-export-hint">Your draft is empty.</p>
-              </div>
+              <div class="deck-results-label settings-status" id="statusText">Loading...</div>
             </div>
 
-            <div class="deckbuilder-layout">
-              <section class="card deckbuilder-pool-card-shell">
-                <div class="deck-browser-controls binder-controls">
-                  <div class="binder-controls-sort-top-row">
-                    <div class="binder-controls-sort-left">
-                      <span class="section-label">Card Pool</span>
-                    </div>
+            <div id="accessNotice" class="settings-empty" hidden></div>
 
-                    <div class="binder-controls-sort-box">
-                      <select id="binderSort" class="deck-select">
-                        <option value="name">Name</option>
-                        <option value="level">Level</option>
-                        <option value="rank">Rank</option>
-                        <option value="link">Link Rating</option>
-                        <option value="scale">Pendulum Scale</option>
-                        <option value="atk">ATK</option>
-                        <option value="def">DEF</option>
-                      </select>
+            <div id="builderShell" class="deckbuilder-shell" hidden>
+              <div class="deckbuilder-summary-grid">
+                <article class="mini-card">
+                  <span>Main Deck</span>
+                  <strong id="mainCount">0</strong>
+                </article>
+                <article class="mini-card">
+                  <span>Extra Deck</span>
+                  <strong id="extraCount">0</strong>
+                </article>
+                <article class="mini-card">
+                  <span>Total Used</span>
+                  <strong id="totalUsedCount">0</strong>
+                </article>
+              </div>
 
-                      <button
-                        type="button"
-                        id="binderSortDirection"
-                        class="sort-direction-button"
-                        aria-label="Toggle sort direction"
-                        title="Ascending"
-                      >
-                        &uarr;
-                      </button>
+              <div class="deckbuilder-actions-row">
+                <div class="deckbuilder-info-box">
+                  <span class="section-label">Controls</span>
+                  <p class="deckbuilder-controls-hint">Left click previews the card in the rail on the left. Right click adds it to your deck. Fusion, Synchro, Xyz and Link monsters go to Extra automatically.</p>
+                </div>
 
-                      <button
-                        type="button"
-                        id="toggleFiltersButton"
-                        class="filters-toggle-button"
-                        aria-expanded="false"
-                        aria-controls="binderFiltersPanel"
-                        title="Show filters"
-                      >
-                        Show filters
-                      </button>
-                    </div>
-                  </div>
+                <div class="deckbuilder-export-box">
+                  <button type="button" id="exportButton" class="button button-primary">Export .ydk</button>
+                  <button type="button" id="clearDeckButton" class="button button-secondary">Clear deck</button>
+                  <p id="exportHint" class="muted deckbuilder-export-hint">Your draft is empty.</p>
+                </div>
+              </div>
 
-                  <div id="binderFiltersPanel" class="binder-filters-panel is-collapsed">
-                    <div class="binder-controls-type-row">
-                      <select id="filterType" class="deck-select">
-                        <option value="">All Cards</option>
-                        <option value="Monster">Monster</option>
-                        <option value="Spell">Spell</option>
-                        <option value="Trap">Trap</option>
-                      </select>
-                    </div>
+              <div class="deckbuilder-layout">
+                <section class="card deckbuilder-pool-card-shell">
+                  <div class="deck-browser-controls binder-controls">
+                    <div class="binder-controls-sort-top-row">
+                      <div class="binder-controls-sort-left">
+                        <span class="section-label">Card Pool</span>
+                      </div>
 
-                    <div class="binder-controls-monster-row monster-filter-row">
-                      <select id="filterAttribute" class="deck-select">
-                        <option value="">All Attributes</option>
-                        <option value="DARK">DARK</option>
-                        <option value="LIGHT">LIGHT</option>
-                        <option value="EARTH">EARTH</option>
-                        <option value="WATER">WATER</option>
-                        <option value="FIRE">FIRE</option>
-                        <option value="WIND">WIND</option>
-                        <option value="DIVINE">DIVINE</option>
-                      </select>
+                      <div class="binder-controls-sort-box">
+                        <select id="binderSort" class="deck-select">
+                          <option value="name">Name</option>
+                          <option value="level">Level</option>
+                          <option value="rank">Rank</option>
+                          <option value="link">Link Rating</option>
+                          <option value="scale">Pendulum Scale</option>
+                          <option value="atk">ATK</option>
+                          <option value="def">DEF</option>
+                        </select>
 
-                      <select id="filterRace" class="deck-select">
-                        <option value="">All Types</option>
-                        <option value="Aqua">Aqua</option>
-                        <option value="Beast">Beast</option>
-                        <option value="Beast-Warrior">Beast-Warrior</option>
-                        <option value="Creator-God">Creator-God</option>
-                        <option value="Cyberse">Cyberse</option>
-                        <option value="Dinosaur">Dinosaur</option>
-                        <option value="Divine-Beast">Divine-Beast</option>
-                        <option value="Dragon">Dragon</option>
-                        <option value="Fairy">Fairy</option>
-                        <option value="Fiend">Fiend</option>
-                        <option value="Fish">Fish</option>
-                        <option value="Illusion">Illusion</option>
-                        <option value="Insect">Insect</option>
-                        <option value="Machine">Machine</option>
-                        <option value="Plant">Plant</option>
-                        <option value="Psychic">Psychic</option>
-                        <option value="Pyro">Pyro</option>
-                        <option value="Reptile">Reptile</option>
-                        <option value="Rock">Rock</option>
-                        <option value="Sea Serpent">Sea Serpent</option>
-                        <option value="Spellcaster">Spellcaster</option>
-                        <option value="Thunder">Thunder</option>
-                        <option value="Warrior">Warrior</option>
-                        <option value="Winged Beast">Winged Beast</option>
-                        <option value="Wyrm">Wyrm</option>
-                        <option value="Zombie">Zombie</option>
-                      </select>
+                        <button
+                          type="button"
+                          id="binderSortDirection"
+                          class="sort-direction-button"
+                          aria-label="Toggle sort direction"
+                          title="Ascending"
+                        >
+                          &uarr;
+                        </button>
 
-                      <div id="filterSubtypes" class="subtype-panel" aria-label="Monster subtypes">
-                        <span class="subtype-panel-title">Subtypes</span>
-                        <label class="subtype-chip"><input type="checkbox" value="Normal" /><span>Normal</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Effect" /><span>Effect</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Union" /><span>Union</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Spirit" /><span>Spirit</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Flip" /><span>Flip</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Gemini" /><span>Gemini</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Toon" /><span>Toon</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Ritual" /><span>Ritual</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Fusion" /><span>Fusion</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Synchro" /><span>Synchro</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Xyz" /><span>Xyz</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Pendulum" /><span>Pendulum</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Link" /><span>Link</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Tuner" /><span>Tuner</span></label>
+                        <button
+                          type="button"
+                          id="toggleFiltersButton"
+                          class="filters-toggle-button"
+                          aria-expanded="false"
+                          aria-controls="binderFiltersPanel"
+                          title="Show filters"
+                        >
+                          Show filters
+                        </button>
                       </div>
                     </div>
 
-                    <div class="binder-controls-stats-row monster-filter-row">
-                      <input type="number" id="filterAtkExact" class="deck-search" placeholder="ATK" />
-                      <input type="number" id="filterAtkMin" class="deck-search" placeholder="Min ATK" />
-                      <input type="number" id="filterAtkMax" class="deck-search" placeholder="Max ATK" />
+                    <div id="binderFiltersPanel" class="binder-filters-panel is-collapsed">
+                      <div class="binder-controls-type-row">
+                        <select id="filterType" class="deck-select">
+                          <option value="">All Cards</option>
+                          <option value="Monster">Monster</option>
+                          <option value="Spell">Spell</option>
+                          <option value="Trap">Trap</option>
+                        </select>
+                      </div>
 
-                      <input type="number" id="filterDefExact" class="deck-search" placeholder="DEF" />
-                      <input type="number" id="filterDefMin" class="deck-search" placeholder="Min DEF" />
-                      <input type="number" id="filterDefMax" class="deck-search" placeholder="Max DEF" />
-                    </div>
+                      <div class="binder-controls-monster-row monster-filter-row">
+                        <select id="filterAttribute" class="deck-select">
+                          <option value="">All Attributes</option>
+                          <option value="DARK">DARK</option>
+                          <option value="LIGHT">LIGHT</option>
+                          <option value="EARTH">EARTH</option>
+                          <option value="WATER">WATER</option>
+                          <option value="FIRE">FIRE</option>
+                          <option value="WIND">WIND</option>
+                          <option value="DIVINE">DIVINE</option>
+                        </select>
 
-                    <div class="binder-controls-progression-row monster-filter-row">
-                      <input type="number" id="filterLevelExact" class="deck-search" placeholder="Level" />
-                      <input type="number" id="filterLevelMin" class="deck-search" placeholder="Min level" />
-                      <input type="number" id="filterLevelMax" class="deck-search" placeholder="Max level" />
+                        <select id="filterRace" class="deck-select">
+                          <option value="">All Types</option>
+                          <option value="Aqua">Aqua</option>
+                          <option value="Beast">Beast</option>
+                          <option value="Beast-Warrior">Beast-Warrior</option>
+                          <option value="Creator-God">Creator-God</option>
+                          <option value="Cyberse">Cyberse</option>
+                          <option value="Dinosaur">Dinosaur</option>
+                          <option value="Divine-Beast">Divine-Beast</option>
+                          <option value="Dragon">Dragon</option>
+                          <option value="Fairy">Fairy</option>
+                          <option value="Fiend">Fiend</option>
+                          <option value="Fish">Fish</option>
+                          <option value="Illusion">Illusion</option>
+                          <option value="Insect">Insect</option>
+                          <option value="Machine">Machine</option>
+                          <option value="Plant">Plant</option>
+                          <option value="Psychic">Psychic</option>
+                          <option value="Pyro">Pyro</option>
+                          <option value="Reptile">Reptile</option>
+                          <option value="Rock">Rock</option>
+                          <option value="Sea Serpent">Sea Serpent</option>
+                          <option value="Spellcaster">Spellcaster</option>
+                          <option value="Thunder">Thunder</option>
+                          <option value="Warrior">Warrior</option>
+                          <option value="Winged Beast">Winged Beast</option>
+                          <option value="Wyrm">Wyrm</option>
+                          <option value="Zombie">Zombie</option>
+                        </select>
 
-                      <input type="number" id="filterRankExact" class="deck-search" placeholder="Rank" />
-                      <input type="number" id="filterRankMin" class="deck-search" placeholder="Min rank" />
-                      <input type="number" id="filterRankMax" class="deck-search" placeholder="Max rank" />
+                        <div id="filterSubtypes" class="subtype-panel" aria-label="Monster subtypes">
+                          <span class="subtype-panel-title">Subtypes</span>
+                          <label class="subtype-chip"><input type="checkbox" value="Normal" /><span>Normal</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Effect" /><span>Effect</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Union" /><span>Union</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Spirit" /><span>Spirit</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Flip" /><span>Flip</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Gemini" /><span>Gemini</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Toon" /><span>Toon</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Ritual" /><span>Ritual</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Fusion" /><span>Fusion</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Synchro" /><span>Synchro</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Xyz" /><span>Xyz</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Pendulum" /><span>Pendulum</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Link" /><span>Link</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Tuner" /><span>Tuner</span></label>
+                        </div>
+                      </div>
 
-                      <input type="number" id="filterLinkExact" class="deck-search" placeholder="Link" />
-                      <input type="number" id="filterLinkMin" class="deck-search" placeholder="Min link" />
-                      <input type="number" id="filterLinkMax" class="deck-search" placeholder="Max link" />
-                    </div>
+                      <div class="binder-controls-stats-row monster-filter-row">
+                        <input type="number" id="filterAtkExact" class="deck-search" placeholder="ATK" />
+                        <input type="number" id="filterAtkMin" class="deck-search" placeholder="Min ATK" />
+                        <input type="number" id="filterAtkMax" class="deck-search" placeholder="Max ATK" />
 
-                    <div class="binder-controls-scale-arrows-row monster-filter-row">
-                      <input type="number" id="filterScaleExact" class="deck-search" placeholder="Pendulum scale" />
-                      <input type="number" id="filterScaleMin" class="deck-search" placeholder="Min scale" />
-                      <input type="number" id="filterScaleMax" class="deck-search" placeholder="Max scale" />
+                        <input type="number" id="filterDefExact" class="deck-search" placeholder="DEF" />
+                        <input type="number" id="filterDefMin" class="deck-search" placeholder="Min DEF" />
+                        <input type="number" id="filterDefMax" class="deck-search" placeholder="Max DEF" />
+                      </div>
 
-                      <div id="filterLinkArrows" class="subtype-panel" aria-label="Link arrows">
-                        <span class="subtype-panel-title">Link Arrows</span>
-                        <label class="subtype-chip"><input type="checkbox" value="Top-Left" /><span>Top-Left</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Top" /><span>Top</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Top-Right" /><span>Top-Right</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Left" /><span>Left</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Right" /><span>Right</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Bottom-Left" /><span>Bottom-Left</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Bottom" /><span>Bottom</span></label>
-                        <label class="subtype-chip"><input type="checkbox" value="Bottom-Right" /><span>Bottom-Right</span></label>
+                      <div class="binder-controls-progression-row monster-filter-row">
+                        <input type="number" id="filterLevelExact" class="deck-search" placeholder="Level" />
+                        <input type="number" id="filterLevelMin" class="deck-search" placeholder="Min level" />
+                        <input type="number" id="filterLevelMax" class="deck-search" placeholder="Max level" />
+
+                        <input type="number" id="filterRankExact" class="deck-search" placeholder="Rank" />
+                        <input type="number" id="filterRankMin" class="deck-search" placeholder="Min rank" />
+                        <input type="number" id="filterRankMax" class="deck-search" placeholder="Max rank" />
+
+                        <input type="number" id="filterLinkExact" class="deck-search" placeholder="Link" />
+                        <input type="number" id="filterLinkMin" class="deck-search" placeholder="Min link" />
+                        <input type="number" id="filterLinkMax" class="deck-search" placeholder="Max link" />
+                      </div>
+
+                      <div class="binder-controls-scale-arrows-row monster-filter-row">
+                        <input type="number" id="filterScaleExact" class="deck-search" placeholder="Pendulum scale" />
+                        <input type="number" id="filterScaleMin" class="deck-search" placeholder="Min scale" />
+                        <input type="number" id="filterScaleMax" class="deck-search" placeholder="Max scale" />
+
+                        <div id="filterLinkArrows" class="subtype-panel" aria-label="Link arrows">
+                          <span class="subtype-panel-title">Link Arrows</span>
+                          <label class="subtype-chip"><input type="checkbox" value="Top-Left" /><span>Top-Left</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Top" /><span>Top</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Top-Right" /><span>Top-Right</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Left" /><span>Left</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Right" /><span>Right</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Bottom-Left" /><span>Bottom-Left</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Bottom" /><span>Bottom</span></label>
+                          <label class="subtype-chip"><input type="checkbox" value="Bottom-Right" /><span>Bottom-Right</span></label>
+                        </div>
+                      </div>
+
+                      <div class="binder-controls-spell-row spell-filter-row">
+                        <select id="filterSpellType" class="deck-select">
+                          <option value="">Any Spells</option>
+                          <option value="Normal">Normal</option>
+                          <option value="Continuous">Continuous</option>
+                          <option value="Equip">Equip</option>
+                          <option value="Field">Field</option>
+                          <option value="Quick-Play">Quick-Play</option>
+                          <option value="Ritual">Ritual</option>
+                        </select>
+                      </div>
+
+                      <div class="binder-controls-trap-row trap-filter-row">
+                        <select id="filterTrapType" class="deck-select">
+                          <option value="">Any Traps</option>
+                          <option value="Normal">Normal</option>
+                          <option value="Continuous">Continuous</option>
+                          <option value="Counter">Counter</option>
+                        </select>
                       </div>
                     </div>
-
-                    <div class="binder-controls-spell-row spell-filter-row">
-                      <select id="filterSpellType" class="deck-select">
-                        <option value="">Any Spells</option>
-                        <option value="Normal">Normal</option>
-                        <option value="Continuous">Continuous</option>
-                        <option value="Equip">Equip</option>
-                        <option value="Field">Field</option>
-                        <option value="Quick-Play">Quick-Play</option>
-                        <option value="Ritual">Ritual</option>
-                      </select>
-                    </div>
-
-                    <div class="binder-controls-trap-row trap-filter-row">
-                      <select id="filterTrapType" class="deck-select">
-                        <option value="">Any Traps</option>
-                        <option value="Normal">Normal</option>
-                        <option value="Continuous">Continuous</option>
-                        <option value="Counter">Counter</option>
-                      </select>
-                    </div>
                   </div>
-                </div>
 
-                <div id="binderStatus" class="deck-results-label">Loading your binder...</div>
-                <div id="binderGrid" class="binder-grid deckbuilder-pool-grid"></div>
-              </section>
-
-              <aside class="deckbuilder-sidebar">
-                <section class="card deckbuilder-section-card">
-                  <div class="deckbuilder-section-head">
-                    <div>
-                      <p class="section-label">Main Deck</p>
-                      <h4 id="mainSectionLabel">0 cards</h4>
-                    </div>
-                  </div>
-                  <div id="mainList" class="deckbuilder-section-list"></div>
+                  <div id="binderStatus" class="deck-results-label">Loading your binder...</div>
+                  <div id="binderGrid" class="binder-grid deckbuilder-pool-grid"></div>
                 </section>
 
-                <section class="card deckbuilder-section-card">
-                  <div class="deckbuilder-section-head">
-                    <div>
-                      <p class="section-label">Extra Deck</p>
-                      <h4 id="extraSectionLabel">0 cards</h4>
+                <aside class="deckbuilder-sidebar">
+                  <section class="card deckbuilder-section-card">
+                    <div class="deckbuilder-section-head">
+                      <div>
+                        <p class="section-label">Main Deck</p>
+                        <h4 id="mainSectionLabel">0 cards</h4>
+                      </div>
                     </div>
-                  </div>
-                  <div id="extraList" class="deckbuilder-section-list"></div>
-                </section>
+                    <div id="mainList" class="deckbuilder-section-list"></div>
+                  </section>
 
-                <section class="card deckbuilder-section-card">
-                  <div class="deckbuilder-section-head">
-                    <div>
-                      <p class="section-label">Side Deck</p>
-                      <h4 id="sideSectionLabel">0 cards</h4>
+                  <section class="card deckbuilder-section-card">
+                    <div class="deckbuilder-section-head">
+                      <div>
+                        <p class="section-label">Extra Deck</p>
+                        <h4 id="extraSectionLabel">0 cards</h4>
+                      </div>
                     </div>
-                  </div>
-                  <div id="sideList" class="deckbuilder-section-list"></div>
-                </section>
-              </aside>
+                    <div id="extraList" class="deckbuilder-section-list"></div>
+                  </section>
+                </aside>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
-  </main>
-
-  <div id="imageModal" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" data-close="true"></div>
-    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <button class="modal-close" type="button" id="closeModal" aria-label="Close popup">x</button>
-      <p id="modalTitle" class="modal-title"></p>
-
-      <div class="modal-media">
-        <div class="modal-image-wrap">
-          <img id="modalImage" class="modal-image" src="" alt="">
-          <span id="modalBanlistBadge" class="binder-banlist-badge modal-banlist-badge" hidden>
-            <img id="modalBanlistIcon" class="binder-banlist-icon modal-banlist-icon" src="" alt="">
-          </span>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   </div>
 
   <script src="/deckbuilder.js"></script>
