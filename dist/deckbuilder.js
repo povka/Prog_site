@@ -199,7 +199,7 @@ function parseBanlistConfig(content) {
       continue
     }
 
-    const match = line.match(/^(\d+)\s+(\d+)/)
+    const match = line.match(/^(\d+)\s+(\d+)\b/)
     if (!match) continue
 
     const cardId = normalizeCardId(match[1])
@@ -253,6 +253,46 @@ async function loadBanlistData(fileName = deckBanlist.value || activeBanlistFile
 
 function getStorageKey() {
   return currentPlayer ? `${STORAGE_PREFIX}${currentPlayer}` : ""
+}
+
+function getBanlistStatusForRow(row) {
+  const possibleIds = [
+    row?.cardid,
+    row?.cardId,
+    row?.id,
+    row?.passcode,
+    row?._deckKey
+  ]
+
+  for (const value of possibleIds) {
+    const normalized = normalizeCardId(value)
+    if (normalized && banlistLimitById.has(normalized)) {
+      const limit = Number(banlistLimitById.get(normalized))
+      if (limit === 0 || limit === 1 || limit === 2) return limit
+    }
+  }
+
+  return null
+}
+
+function getBanlistIconForRow(row) {
+  const status = getBanlistStatusForRow(row)
+
+  if (status === 0) return "images/banlist/banned.png"
+  if (status === 1) return "images/banlist/limited1.png"
+  if (status === 2) return "images/banlist/limited2.png"
+
+  return ""
+}
+
+function getBanlistLabelForRow(row) {
+  const status = getBanlistStatusForRow(row)
+
+  if (status === 0) return "Forbidden"
+  if (status === 1) return "Limited"
+  if (status === 2) return "Semi-Limited"
+
+  return ""
 }
 
 function getBanlistLimit(cardKey) {
@@ -1339,6 +1379,8 @@ function renderPool() {
     const previewImageUrl = getBinderPreviewImage(row)
     const usedCount = getUsedCount(cardKey)
     const remainingCount = getRemainingCount(cardKey)
+    const banlistIcon = getBanlistIconForRow(row)
+    const banlistLabel = getBanlistLabelForRow(row)
 
     const card = document.createElement("article")
     card.className = `binder-card deckbuilder-pool-card${cardKey === previewCardKey ? " is-previewed" : ""}`
@@ -1352,6 +1394,9 @@ function renderPool() {
         ${previewImageUrl
           ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="binder-image" loading="lazy" />`
           : '<div class="binder-no-image">No Image</div>'}
+        ${banlistIcon
+          ? `<span class="binder-banlist-badge"><img src="${banlistIcon}" alt="${banlistLabel || "Banlist status"}" class="binder-banlist-icon" loading="lazy" /></span>`
+          : ""}
         <span class="binder-qty">x${safeText(row.quantity) || "1"}</span>
         ${usedCount > 0 ? `<span class="deckbuilder-used-pill">Used ${usedCount}</span>` : ""}
       </div>
@@ -1420,6 +1465,8 @@ function renderSection(section, container, labelElement) {
 
   items.forEach(({ cardKey, count, row }) => {
     const previewImageUrl = getBinderPreviewImage(row)
+    const banlistIcon = getBanlistIconForRow(row)
+    const banlistLabel = getBanlistLabelForRow(row)
     const canAddMore = !getAddBlockedReason(cardKey, section)
     const item = document.createElement("div")
     item.className = "deckbuilder-section-item"
@@ -1429,6 +1476,9 @@ function renderSection(section, container, labelElement) {
         ${previewImageUrl
           ? `<img src="${previewImageUrl}" alt="${safeText(row.name)}" class="deckbuilder-section-thumb" loading="lazy" />`
           : '<span class="deckbuilder-section-thumb deckbuilder-section-thumb-empty">No image</span>'}
+        ${banlistIcon
+          ? `<span class="binder-banlist-badge"><img src="${banlistIcon}" alt="${banlistLabel || "Banlist status"}" class="binder-banlist-icon" loading="lazy" /></span>`
+          : ""}
       </button>
       <div class="deckbuilder-section-copy">
         <div class="deckbuilder-section-title" title="${safeText(row.name)}">${safeText(row.name) || "Unknown Card"}</div>

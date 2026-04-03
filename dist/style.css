@@ -2293,6 +2293,7 @@ p{color:var(--ink-soft)}
 }
 
 .deckbuilder-section-preview{
+  position:relative;
   width:72px;
   height:100px;
   padding:0;
@@ -2301,6 +2302,13 @@ p{color:var(--ink-soft)}
   overflow:hidden;
   background:#090d1f;
   cursor:pointer;
+}
+
+.deckbuilder-section-preview .binder-banlist-badge{
+  top:4px;
+  left:4px;
+  width:22px;
+  height:22px;
 }
 
 .deckbuilder-section-thumb{
